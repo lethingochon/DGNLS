@@ -1,0 +1,78 @@
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-center">
+                <tr>
+                    <th style="width: 50px;">STT</th>
+                    <th>Giáo viên</th>
+                    <th style="width: 90px;">Mã TC</th>
+                    <th>Tên tiêu chí</th>
+                    <th>Minh chứng đính kèm</th>
+                    <th style="width: 140px;">Trạng thái</th>
+                    <th style="width: 160px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in pending_criterias %}
+                <tr>
+                    <td class="text-center">{{ loop.index }}</td>
+                    <td><b>{{ item.teacher.full_name }}</b></td>
+                    <td class="text-center"><span class="badge bg-secondary">{{ item.criteria.code }}</span></td>
+                    <td>{{ item.criteria.name }}</td>
+
+                    <!-- Hiển thị tệp / link minh chứng -->
+                    <!-- Cột Minh chứng đính kèm -->
+                <td>
+                        {% if item.evidences and item.evidences|length > 0 %}
+                        {% for link in item.evidences %}
+                         {% if link.evidence %}
+                        <div class="mb-1">
+                    📄      <b>{{ link.evidence.title or 'Minh chứng' }}</b><br>
+                        {% if link.evidence.storage_type == 'FILE' %}
+                            <a href="{{ url_for('static', filename=link.evidence.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 mt-1">
+                            📥 Xem/Tải tệp
+                            </a>
+                        {% else %}
+                            <a href="{{ link.evidence.file_path }}" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 mt-1">
+                            🔗 Mở liên kết URL
+                            </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                {% else %}
+                <span class="text-muted fst-italic" style="font-size: 13px;">Chưa đính kèm tệp</span>
+                {% endif %}
+                </td>
+
+                    <!-- Cột Trạng thái -->
+                    <td class="text-center">
+                        {% if item.status == "DA_NOP" %}
+                            <span class="badge bg-warning text-dark p-2">⏳ Chờ duyệt</span>
+                        {% elif item.status == "DA_XAC_NHAN" %}
+                            <span class="badge bg-success p-2">✅ Đã đạt</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Cột Thao tác -->
+                    <td class="text-center">
+                        {% if item.status == "DA_NOP" %}
+                            <form action="/approve-criteria/{{ item.id }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-success fw-bold">✅ Xác nhận</button>
+                            </form>
+                        {% elif item.status == "DA_XAC_NHAN" %}
+                            <form action="/unapprove-criteria/{{ item.id }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">↩️ Bỏ duyệt</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted p-4">Chưa có dữ liệu minh chứng.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

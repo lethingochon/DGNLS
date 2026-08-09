@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tiêu chí của tôi</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 30px;
+        }
+
+        .field-title {
+            background-color: #e9f2ff;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+    </style>
+
+</head>
+<body>
+
+<h2>Xin chào {{ teacher_name }}</h2>
+
+<h3 class="mt-3">Danh sách tiêu chí của tôi</h3>
+
+<table class="table table-bordered table-hover mt-3">
+
+    <thead class="table-primary text-center">
+        <tr>
+            <th style="width: 60px;">STT</th>
+            <th style="width: 100px;">Mã</th>
+            <th>Nội dung</th>
+            <th style="width: 180px;">Trạng thái</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% set current_field = None %}
+
+    {% for item in teacher_criteria %}
+
+        <!-- HIỂN THỊ TÊN LĨNH VỰC -->
+        {% if current_field != item.criteria.field.name %}
+            {% set current_field = item.criteria.field.name %}
+
+            <tr class="field-title">
+                <td colspan="4">
+                    {{ current_field }}
+                </td>
+            </tr>
+        {% endif %}
+
+        <!-- DÒNG TIÊU CHÍ -->
+        <tr>
+
+            <td class="text-center">
+                {{ loop.index }}
+            </td>
+
+            <td class="text-center fw-bold">
+                {{ item.criteria.code }}
+            </td>
+
+            <td>
+                {{ item.criteria.name }}
+            </td>
+
+            <td class="text-center">
+
+                {% if item.status == "CHUA_THUC_HIEN" %}
+                    <span class="badge bg-secondary">Chưa thực hiện</span>
+
+                {% elif item.status == "DA_NOP" %}
+                    <span class="badge bg-warning text-dark">Đã nộp</span>
+
+                {% elif item.status == "DA_XAC_NHAN" %}
+                    <span class="badge bg-success">Đã xác nhận</span>
+
+                {% else %}
+                    <span class="badge bg-dark">{{ item.status }}</span>
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+</body>
+</html>

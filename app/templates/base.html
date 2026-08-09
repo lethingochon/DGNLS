@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hệ Thống Đánh Giá Năng Lực Số{% endblock %}</title>
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-custom {
+            background: linear-gradient(135deg, #0b192c 0%, #1e3e62 100%);
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-link:hover {
+            opacity: 0.85;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- NAVIGATION BAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom shadow-sm py-2">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+                <span class="fs-4">🏫</span>
+                <span style="letter-spacing: 0.5px;">ĐÁNH GIÁ NĂNG LỰC SỐ</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {% if session.get('teacher_id') %}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 align-items-lg-center">
+                    
+                    <!-- 1. MENU CHUNG CHO GIÁO VIÊN & TỔ TRƯỜNG -->
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-semibold px-3 rounded-pill" href="{{ url_for('my_criteria') }}">
+                            📝 Tiêu chí của tôi
+                        </a>
+                    </li>
+
+                    <!-- 2. MENU DÀNH RIÊNG CHO TỔ TRƯỜNG (TT) -->
+                    {% if session.get('role_code') == 'TT' %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning fw-bold px-3 rounded-pill bg-warning bg-opacity-10 border border-warning" href="{{ url_for('department_review') }}">
+                            📋 Duyệt minh chứng Tổ
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- 3. MENU DÀNH CHO BAN GIÁM HIỆU (HT & HP) -->
+                    {% if session.get('role_code') in ['HT', 'HP'] %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-semibold px-3 rounded-pill" href="{{ url_for('admin_dashboard') }}">
+                            📊 Dashboard Tổng quan
+                        </a>
+                    </li>
+                    
+                    <!-- CHỈ HIỆU PHÓ (HP) MỚI CÓ MENU DUYỆT TỔ TRƯỜNG -->
+                    {% if session.get('role_code') == 'HP' %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning fw-bold px-3 rounded-pill bg-warning bg-opacity-10 border border-warning ms-lg-1" href="/admin/review-heads">
+                            👔 Duyệt Tổ Trưởng
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="nav-item">
+                        <a class="nav-link text-white fw-semibold px-3 rounded-pill" href="/admin/manage-teachers">
+                            ⚙️ Quản lý phân công
+                        </a>
+                    </li>
+                    {% endif %}
+
+                </ul>
+
+                <!-- THÔNG TIN TÀI KHOẢN & ĐĂNG XUẤT -->
+                <div class="d-flex align-items-center gap-3 mt-2 mt-lg-0">
+                    <div class="text-white text-lg-end">
+                        <div class="fw-bold small">{{ session.get('teacher_name') }}</div>
+                        <small class="text-white-50 d-block" style="font-size: 11px;">
+                            {{ session.get('role_name', 'GIÁO VIÊN') }} 
+                            {% if session.get('dept_name') %}| {{ session.get('dept_name') }}{% endif %}
+                        </small>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3 fw-bold">
+                        🚪 Đăng xuất
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- HỂ THỐNG HỘI THOẠI CẢNH BÁO (FLASH MESSAGES) -->
+    <div class="container-fluid px-4 mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- NỘI DUNG CHÍNH CỦA TỪNG TRANG -->
+    <main class="container-fluid px-4 py-3 flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER TRƯỜNG -->
+    <footer class="bg-white border-top py-3 mt-auto">
+        <div class="container-fluid px-4 text-center text-muted small">
+            © 2026 Phần Mềm Đánh Giá Năng Lực Số Giáo Viên THPT
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}BGH - Tổng Quan Kiểm Định Năng Lực Số{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- 1. Hero Banner Chào Mừng BGH -->
+    <div class="card border-0 text-white p-4 mb-4 shadow-sm" style="background: linear-gradient(135deg, #0b192c 0%, #1e3e62 100%); border-radius: 16px;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2" style="font-size: 12px;">
+                    📣 Hội Đồng Kiểm Định Chất Lượng Giáo Dục THPT 2026
+                </span>
+                <h2 class="fw-bold mb-1" style="font-size: 28px;">
+                    Ban Giám Hiệu: {{ session.get('teacher_name', 'DƯ QUỐC KIỆT') }}
+                </h2>
+                <p class="text-white-50 mb-0" style="font-size: 14px;">
+                    Theo dõi tiến độ số hóa minh chứng sư phạm và phê duyệt chuẩn nghề nghiệp giáo viên toàn trường.
+                </p>
+            </div>
+            <div>
+                <a href="/admin/export-excel" class="btn text-white fw-bold px-4 py-2 shadow-sm" style="background-color: #d97706; border-radius: 10px;">
+                    📥 Xuất Báo Cáo Kiểm Định
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHUNG LỐI TẮT DÀNH RIÊNG CHO HIỆU PHÓ (HP) -->
+    {% if session.get('role_code') == 'HP' %}
+    <div class="alert alert-warning border-warning shadow-sm d-flex justify-content-between align-items-center mb-4 p-3" style="border-radius: 14px; background-color: #fffbeb;">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fs-1">👔</span>
+            <div>
+                <h5 class="fw-bold mb-1 text-dark" style="font-size: 18px;">Thẩm Định Minh Chứng Khối Tổ Trưởng</h5>
+                <p class="mb-0 text-secondary small" style="font-size: 13px;">Dành riêng cho Hiệu Phó phê duyệt danh sách hồ sơ minh chứng do các Tổ Trưởng Chuyên Môn gửi lên.</p>
+            </div>
+        </div>
+        <a href="/admin/review-heads" class="btn btn-warning fw-bold text-dark px-4 py-2 shadow-sm rounded-pill ms-2" style="background-color: #f59e0b; border: none;">
+            👉 Vào Duyệt Tổ Trưởng
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- 2. Khối 4 Thẻ Thống Kê (Stats Cards) -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Tổng số GV -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; background: #ffffff;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 11px; letter-spacing: 0.5px;">TỔNG SỐ GIÁO VIÊN</small>
+                        <h3 class="fw-bold my-1" style="font-size: 26px; color: #0f172a;">{{ total_teachers }} <span class="fs-6 text-muted fw-normal">giáo viên</span></h3>
+                    </div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 20px;">
+                        🎓
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Tỷ lệ hoàn thành -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; background: #ffffff;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 11px; letter-spacing: 0.5px;">TỶ LỆ HOÀN THÀNH TOÀN TRƯỜNG</small>
+                        <h3 class="fw-bold my-1 text-success" style="font-size: 26px;">{{ school_progress }}%</h3>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 20px;">
+                        📊
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height: 6px; border-radius: 10px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ school_progress }}%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Minh chứng đã thẩm định -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; background: #ffffff;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 11px; letter-spacing: 0.5px;">MINH CHỨNG ĐÃ THẨM ĐỊNH</small>
+                        <h3 class="fw-bold my-1" style="font-size: 26px; color: #0f172a;">{{ total_approved }} <span class="fs-6 text-muted fw-normal">tệp</span></h3>
+                    </div>
+                    <div class="rounded-circle bg-purple bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 20px; background-color: #f3e8ff;">
+                        🏅
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Chờ BGH phê duyệt -->
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; background: #ffffff;">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 11px; letter-spacing: 0.5px;">CHỜ BGH PHÊ DUYỆT CẤP TRƯỜNG</small>
+                        <h3 class="fw-bold my-1 text-warning" style="font-size: 26px;">{{ total_pending }} <span class="fs-6 text-muted fw-normal">hồ sơ</span></h3>
+                    </div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 20px;">
+                        ⏳
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Thanh Điều Hướng Tab -->
+    <div class="bg-white p-2 rounded-3 shadow-sm mb-4 border d-flex gap-2">
+        <button class="btn btn-light fw-bold text-dark border-0 px-3 active" style="background-color: #f1f5f9;">
+            📊 Tổng Quan & Tra Cứu Toàn Trường
+        </button>
+    </div>
+
+    <!-- 4. Section: Tiến Độ Thẩm Định Theo Tổ Chuyên Môn -->
+    <h4 class="fw-bold mb-3" style="color: #0f172a;">Tiến Độ Thẩm Định Theo Tổ Chuyên Môn</h4>
+
+    <div class="d-flex flex-column gap-3 mb-5">
+        {% for item in dept_stats %}
+        <div class="card border-0 shadow-sm p-3" style="border-radius: 14px; background: #ffffff;">
+            <div class="row align-items-center">
+                
+                <!-- Cột 1: Tên Tổ & Tổ trưởng -->
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <h5 class="fw-bold mb-0" style="font-size: 17px; color: #0b192c;">{{ item.name }}</h5>
+                        <span class="badge bg-primary text-white fw-bold px-2 py-1" style="font-size: 11px;">
+                            {{ item.teacher_count }} GIÁO VIÊN
+                        </span>
+                    </div>
+                    <small class="text-muted" style="font-size: 13px;">
+                        Tổ trưởng: <b class="text-dark">{{ item.leader }}</b>
+                    </small>
+                </div>
+
+                <!-- Cột 2: Đã đạt chuẩn -->
+                <div class="col-md-2 text-md-center my-2 my-md-0">
+                    <small class="text-muted d-block" style="font-size: 12px;">ĐÃ ĐẠT CHUẨN</small>
+                    <span class="fw-bold text-success" style="font-size: 16px;">{{ item.approved }} tệp</span>
+                </div>
+
+                <!-- Cột 3: Đang thẩm định -->
+                <div class="col-md-2 text-md-center my-2 my-md-0">
+                    <small class="text-muted d-block" style="font-size: 12px;">ĐANG THẨM ĐỊNH</small>
+                    <span class="fw-bold text-warning" style="font-size: 16px;">{{ item.pending }} tệp</span>
+                </div>
+
+                <!-- Cột 4: Tỷ lệ % & Thanh Tiến độ ngang -->
+                <div class="col-md-5">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted fw-bold" style="font-size: 12px;">TỶ LỆ HOÀN THÀNH</small>
+                        <span class="fw-bold text-success" style="font-size: 16px;">{{ item.progress }}%</span>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 10px; background-color: #e2e8f0;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ item.progress }}%;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

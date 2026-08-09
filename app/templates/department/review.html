@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Duyệt Minh Chứng Tổ Chuyên Môn{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="card border-0 text-white p-4 mb-4 shadow-sm" style="background: linear-gradient(135deg, #0b192c 0%, #1e3e62 100%); border-radius: 16px;">
+        <h3 class="fw-bold mb-1">🔍 Thẩm Định Minh Chứng - {{ session.get('dept_name', 'Tổ Chuyên Môn') }}</h3>
+        <p class="text-white-50 mb-0">Rà soát và xác nhận hồ sơ năng lực số theo từng giáo viên trong tổ.</p>
+    </div>
+
+    <!-- Danh sách Accordion Giáo Viên -->
+    {% if grouped_reviews and grouped_reviews|length > 0 %}
+        <div class="accordion d-flex flex-column gap-3" id="accordionTeachers">
+            {% for g in grouped_reviews %}
+            <div class="accordion-item border-0 shadow-sm rounded-3 overflow-hidden">
+                <h2 class="accordion-header" id="heading-{{ g.teacher_id }}">
+                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3 px-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ g.teacher_id }}">
+                        <div class="d-flex align-items-center justify-content-between w-100 me-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="fs-5">👨‍🏫</span>
+                                <div>
+                                    <span class="fw-bold text-dark fs-6">{{ g.teacher_name }}</span>
+                                    <span class="badge bg-light text-secondary border ms-2">{{ g.teacher_magv }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill">
+                                    Đã nộp: <b>{{ g.total_submitted }}</b> tiêu chí
+                                </span>
+                                {% if g.pending_count > 0 %}
+                                    <span class="badge bg-warning text-dark border border-warning px-3 py-2 rounded-pill">
+                                        ⏳ <b>{{ g.pending_count }}</b> chờ duyệt
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
+                                        ✓ Hoàn thành
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+                <div id="collapse-{{ g.teacher_id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#accordionTeachers">
+                    <div class="accordion-body p-0 border-top">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">TIÊU CHÍ</th>
+                                        <th>MINH CHỨNG</th>
+                                        <th>TRẠNG THÁI</th>
+                                        <th class="text-end pe-4">THAO TÁC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in g.criterias %}
+                                    <tr>
+                                        <td class="ps-4" style="max-width: 320px;">
+                                            <span class="badge bg-primary me-1">{{ item.criteria_code }}</span>
+                                            <span class="fw-semibold text-dark">{{ item.criteria_name }}</span>
+                                            {% if item.feedback %}
+                                                <div class="small text-muted mt-1">💬 <b>Phản hồi:</b> {{ item.feedback }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.evidences and item.evidences|length > 0 %}
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    {% for ev in item.evidences %}
+                                                        {% if ev.file_path %}
+                                                            <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2 fw-semibold" onclick="previewFile('{{ ev.file_path | replace('\\', '/') }}', '{{ item.criteria_code }}')">
+                                                                👁️ File {{ loop.index }}
+                                                            </button>
+                                                        {% elif ev.url %}
+                                                            <a href="{{ ev.url }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 fw-semibold">
+                                                                🔗 Link {{ loop.index }}
+                                                            </a>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">⚠️ Chưa đính kèm file</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.status == 'DA_XAC_NHAN' %}
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">✓ Đã duyệt</span>
+                                            {% elif item.status == 'TU_CHOI' %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">⏳ Chờ GV sửa</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark border border-warning px-2 py-1">⏳ Chờ duyệt</span>
+                                            {% endif %}
+
+                                            {% if item.submitted_at %}
+                                                <div class="small text-muted mt-1" style="font-size: 11px;">
+                                                    📤 <b>Nộp:</b> {{ item.submitted_at.strftime('%H:%M %d/%m/%Y') }}
+                                                </div>
+                                            {% endif %}
+                                            {% if item.reviewed_at %}
+                                                <div class="small text-muted" style="font-size: 11px;">
+                                                    ✅ <b>Duyệt:</b> {{ item.reviewed_at.strftime('%H:%M %d/%m/%Y') }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <button class="btn btn-sm btn-success fw-bold px-2 me-1" onclick="openReviewModal({{ item.id }}, 'DA_XAC_NHAN', '{{ g.teacher_name }}')">
+                                                ✓ Phê duyệt
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning text-dark fw-bold px-2" onclick="openReviewModal({{ item.id }}, 'TU_CHOI', '{{ g.teacher_name }}')">
+                                                ↩️ Yêu cầu sửa
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 14px;">
+            <h5>Tổ chưa có hồ sơ minh chứng nào cần thẩm định.</h5>
+        </div>
+    {% endif %}
+</div>
+
+<!-- MODAL PHẢN HỒI -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="reviewModalTitle">Đánh Giá Minh Chứng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/department/update-status" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="record_id" id="reviewRecordId">
+                    <input type="hidden" name="status" id="reviewStatus">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ghi chú / Phản hồi cho Giáo viên:</label>
+                        <textarea class="form-control" name="feedback" rows="3" placeholder="Nhập nhận xét hoặc nội dung yêu cầu giáo viên bổ sung..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Xác Nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MẮT THẦN 👁️ XEM TỆP TRỰC TIẾP -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 90vw;">
+        <div class="modal-content border-0 shadow" style="height: 85vh;">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold" id="previewTitle">👁️ Xem Minh Chứng</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-secondary bg-opacity-10 d-flex justify-content-center align-items-center" id="previewBody"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openReviewModal(recordId, status, teacherName) {
+    document.getElementById('reviewRecordId').value = recordId;
+    document.getElementById('reviewStatus').value = status;
+    document.getElementById('reviewModalTitle').innerText = (status === 'DA_XAC_NHAN' ? '✓ Duyệt Minh Chứng: ' : '↩️ Yêu Cầu Sửa: ') + teacherName;
+    new bootstrap.Modal(document.getElementById('reviewModal')).show();
+}
+
+function previewFile(filePath, code) {
+    const body = document.getElementById('previewBody');
+    document.getElementById('previewTitle').innerText = '👁️ Minh Chứng Tiêu Chí: ' + code;
+    
+    const ext = filePath.split('.').pop().toLowerCase();
+    const fullPath = '/' + filePath;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        body.innerHTML = `<img src="${fullPath}" class="img-fluid rounded shadow" style="max-height: 100%; object-fit: contain;">`;
+    } else if (ext === 'pdf') {
+        body.innerHTML = `<iframe src="${fullPath}" style="width: 100%; height: 100%; border: none;"></iframe>`;
+    } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+        if (isLocal) {
+            body.innerHTML = `
+                <div class="text-center p-5 bg-white rounded shadow-sm">
+                    <div class="fs-1 mb-2">📄</div>
+                    <h5 class="fw-bold text-dark">Tập tin Office: .${ext.toUpperCase()}</h5>
+                    <p class="text-muted small">Đang chạy môi trường nội bộ (Localhost). Vui lòng tải về hoặc mở trực tiếp để xem nội dung.</p>
+                    <div class="d-flex justify-content-center gap-2 mt-3">
+                        <a href="${fullPath}" target="_blank" class="btn btn-primary fw-bold">📖 Mở File Trực Tiếp</a>
+                        <a href="${fullPath}" download class="btn btn-outline-secondary fw-bold">📥 Tải Về Máy</a>
+                    </div>
+                </div>`;
+        } else {
+            const absoluteUrl = window.location.origin + fullPath;
+            const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
+            body.innerHTML = `<iframe src="${googleDocsUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
+        }
+    } else {
+        body.innerHTML = `<div class="text-center p-5 bg-white rounded shadow-sm">
+            <h5>Định dạng file (.${ext}) cần tải về máy để xem.</h5>
+            <a href="${fullPath}" download class="btn btn-primary mt-3">📥 Tải về máy</a>
+        </div>`;
+    }
+    
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+</script>
+{% endblock %}

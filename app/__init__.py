@@ -13,12 +13,31 @@ db.init_app(app)
 
 from app import models
 
-# 🛠️ NẠP DỮ LIỆU CHUẨN XÁC VÀO CSDL TỪ FILE GV.XLSX
+# 🛠️ NẠP DỮ LIỆU GIÁO VIÊN KHỚP 100% VỚI MODELS.PY
 with app.app_context():
     db.create_all()
     try:
         Teacher = models.Teacher
         
+        # 1. Khởi tạo Môn học, Vai trò, Tổ chuyên môn mặc định
+        default_subject = models.Subject.query.first()
+        if not default_subject:
+            default_subject = models.Subject(code="TIN", name="Tin học")
+            db.session.add(default_subject)
+
+        default_role = models.Role.query.filter_by(code="GV").first()
+        if not default_role:
+            default_role = models.Role(code="GV", name="GIÁO VIÊN")
+            db.session.add(default_role)
+
+        default_dept = models.Department.query.first()
+        if not default_dept:
+            default_dept = models.Department(name="Tổ Tổng Hợp")
+            db.session.add(default_dept)
+            
+        db.session.commit()
+
+        # 2. Đọc file GV.xlsx
         excel_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'GV.xlsx')
         if os.path.exists(excel_path):
             df = pd.read_excel(excel_path)
@@ -27,7 +46,6 @@ with app.app_context():
             for _, row in df.iterrows():
                 email_val, magv_val, name_val, pass_val = '', '', '', '123456'
                 
-                # Dò cột trong file Excel
                 for col in df.columns:
                     col_str = str(col).strip().lower()
                     val_str = str(row[col]).strip()
@@ -38,39 +56,43 @@ with app.app_context():
                         elif 'mật' in col_str or 'matkhau' in col_str or 'pass' in col_str: pass_val = val_str
 
                 if email_val or magv_val:
-                    # Kiểm tra xem tài khoản đã tồn tại trong database chưa
-                    existing = None
-                    if email_val: 
-                        existing = Teacher.query.filter(Teacher.email.ilike(email_val)).first()
-                    if not existing and magv_val: 
-                        existing = Teacher.query.filter_by(magv=magv_val).first()
+                    final_magv = magv_val if magv_val else (email_val.split('@')[0] if email_val else f"GV{added_count+1}")
+                    final_email = email_val if email_val else f"{final_magv.lower()}@thpt.edu.vn"
+
+                    existing = Teacher.query.filter(
+                        (Teacher.email.ilike(final_email)) | (Teacher.magv.ilike(final_magv))
+                    ).first()
 
                     if not existing:
                         gv = Teacher(
-                            email=email_val if email_val else f"{magv_val}@school.edu.vn",
-                            magv=magv_val if magv_val else email_val.split('@')[0],
+                            magv=final_magv,
                             full_name=name_val if name_val else 'Giáo viên',
-                            password_hash=generate_password_hash(pass_val)
+                            email=final_email,
+                            password_hash=generate_password_hash(pass_val),
+                            subject_id=default_subject.id,
+                            role_id=default_role.id,
+                            department_id=default_dept.id
                         )
                         db.session.add(gv)
                         added_count += 1
 
-            # Đảm bảo chắc chắn có tài khoản của cô
+            # Bắt buộc tạo tài khoản của cô
             admin_email = 'lethingochon.hoabinh@gmail.com'
             if not Teacher.query.filter(Teacher.email.ilike(admin_email)).first():
                 admin_acc = Teacher(
-                    email=admin_email,
                     magv='ADMIN',
                     full_name='Lê Thị Ngọc Hớn',
-                    password_hash=generate_password_hash('123456')
+                    email=admin_email,
+                    password_hash=generate_password_hash('123456'),
+                    subject_id=default_subject.id,
+                    role_id=default_role.id,
+                    department_id=default_dept.id
                 )
                 db.session.add(admin_acc)
                 added_count += 1
 
             db.session.commit()
-            print(f">>> ĐÃ NẠP THÀNH CÔNG {added_count} GIÁO VIÊN VÀO CSDL!", flush=True)
-        else:
-            print(f">>> KHÔNG TÌM THẤY FILE GV.XLSX TẠI: {excel_path}", flush=True)
+            print(f">>> ĐÃ NẠP THÀNH CÔNG {added_count} TÀI KHOẢN VÀO CSDL!", flush=True)
     except Exception as e:
         print(f">>> LỖI NẠP DỮ LIỆU: {e}", flush=True)
 

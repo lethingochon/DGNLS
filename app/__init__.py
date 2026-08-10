@@ -13,58 +13,64 @@ db.init_app(app)
 
 from app import models
 
-# 🛠️ NẠP TẤT CẢ GIÁO VIÊN VÀ TỰ ĐỘNG DÒ CỘT EXCEL
+# 🛠️ NẠP DỮ LIỆU CHUẨN XÁC VÀO CSDL TỪ FILE GV.XLSX
 with app.app_context():
     db.create_all()
     try:
-        TeacherModel = getattr(models, 'Teacher', None) or getattr(models, 'GiaoVien', None) or getattr(models, 'User', None)
+        Teacher = models.Teacher
         
-        if TeacherModel:
-            excel_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'GV.xlsx')
-            if os.path.exists(excel_path):
-                df = pd.read_excel(excel_path)
-                added_count = 0
+        excel_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'GV.xlsx')
+        if os.path.exists(excel_path):
+            df = pd.read_excel(excel_path)
+            added_count = 0
+            
+            for _, row in df.iterrows():
+                email_val, magv_val, name_val, pass_val = '', '', '', '123456'
                 
-                for _, row in df.iterrows():
-                    email_val, ma_gv_val, ho_ten_val, pass_val = '', '', '', '123456'
-                    
-                    # Dò tìm cột thông minh không phân biệt hoa thường
-                    for col in df.columns:
-                        col_str = str(col).strip().lower()
-                        val_str = str(row[col]).strip()
-                        if val_str and val_str != 'nan':
-                            if 'email' in col_str: email_val = val_str.lower()
-                            elif 'mã' in col_str or 'magv' in col_str or 'ma_gv' in col_str: ma_gv_val = val_str
-                            elif 'họ' in col_str or 'hoten' in col_str or 'ho_ten' in col_str: ho_ten_val = val_str
-                            elif 'mật' in col_str or 'matkhau' in col_str or 'pass' in col_str: pass_val = val_str
+                # Dò cột trong file Excel
+                for col in df.columns:
+                    col_str = str(col).strip().lower()
+                    val_str = str(row[col]).strip()
+                    if val_str and val_str != 'nan':
+                        if 'email' in col_str: email_val = val_str.lower()
+                        elif 'mã' in col_str or 'magv' in col_str or 'ma_gv' in col_str: magv_val = val_str
+                        elif 'họ' in col_str or 'hoten' in col_str or 'ho_ten' in col_str or 'tên' in col_str: name_val = val_str
+                        elif 'mật' in col_str or 'matkhau' in col_str or 'pass' in col_str: pass_val = val_str
 
-                    if email_val or ma_gv_val:
-                        existing = None
-                        if email_val: existing = TeacherModel.query.filter(TeacherModel.email.ilike(email_val)).first()
-                        if not existing and ma_gv_val: existing = TeacherModel.query.filter_by(ma_gv=ma_gv_val).first()
+                if email_val or magv_val:
+                    # Kiểm tra xem tài khoản đã tồn tại trong database chưa
+                    existing = None
+                    if email_val: 
+                        existing = Teacher.query.filter(Teacher.email.ilike(email_val)).first()
+                    if not existing and magv_val: 
+                        existing = Teacher.query.filter_by(magv=magv_val).first()
 
-                        if not existing:
-                            gv = TeacherModel()
-                            if hasattr(gv, 'email') and email_val: gv.email = email_val
-                            if hasattr(gv, 'ma_gv') and ma_gv_val: gv.ma_gv = ma_gv_val
-                            if hasattr(gv, 'ho_ten'): gv.ho_ten = ho_ten_val
-                            if hasattr(gv, 'password'): gv.password = generate_password_hash(pass_val)
-                            db.session.add(gv)
-                            added_count += 1
+                    if not existing:
+                        gv = Teacher(
+                            email=email_val if email_val else f"{magv_val}@school.edu.vn",
+                            magv=magv_val if magv_val else email_val.split('@')[0],
+                            full_name=name_val if name_val else 'Giáo viên',
+                            password_hash=generate_password_hash(pass_val)
+                        )
+                        db.session.add(gv)
+                        added_count += 1
 
-                # Bắt buộc tạo tài khoản mặc định cho cô nếu chưa có trong file
-                admin_email = 'lethingochon.hoabinh@gmail.com'
-                if not TeacherModel.query.filter(TeacherModel.email.ilike(admin_email)).first():
-                    admin_acc = TeacherModel()
-                    if hasattr(admin_acc, 'email'): admin_acc.email = admin_email
-                    if hasattr(admin_acc, 'ma_gv'): admin_acc.ma_gv = 'ADMIN'
-                    if hasattr(admin_acc, 'ho_ten'): admin_acc.ho_ten = 'Lê Thị Ngọc Hớn'
-                    if hasattr(admin_acc, 'password'): admin_acc.password = generate_password_hash('123456')
-                    db.session.add(admin_acc)
-                    added_count += 1
+            # Đảm bảo chắc chắn có tài khoản của cô
+            admin_email = 'lethingochon.hoabinh@gmail.com'
+            if not Teacher.query.filter(Teacher.email.ilike(admin_email)).first():
+                admin_acc = Teacher(
+                    email=admin_email,
+                    magv='ADMIN',
+                    full_name='Lê Thị Ngọc Hớn',
+                    password_hash=generate_password_hash('123456')
+                )
+                db.session.add(admin_acc)
+                added_count += 1
 
-                db.session.commit()
-                print(f">>> ĐÃ NẠP THÀNH CÔNG {added_count} TÀI KHOẢN VÀO CSDL!", flush=True)
+            db.session.commit()
+            print(f">>> ĐÃ NẠP THÀNH CÔNG {added_count} GIÁO VIÊN VÀO CSDL!", flush=True)
+        else:
+            print(f">>> KHÔNG TÌM THẤY FILE GV.XLSX TẠI: {excel_path}", flush=True)
     except Exception as e:
         print(f">>> LỖI NẠP DỮ LIỆU: {e}", flush=True)
 

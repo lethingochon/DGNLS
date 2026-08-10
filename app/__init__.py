@@ -13,7 +13,7 @@ db.init_app(app)
 
 from app import models
 
-# 🛠️ NẠP TỐI ƯU SIÊU NHANH - KHÔNG LÀM TREO RENDER
+# 🛠️ NẠP TỐI ƯU SIÊU NHANH & TỰ ĐỘNG GÁN ID CHUẨN CHO SQLITE
 with app.app_context():
     db.create_all()
     try:
@@ -32,7 +32,6 @@ with app.app_context():
             xls = pd.ExcelFile(excel_path)
 
             # 1. Nạp Vai trò (HT, HP, TT, TP, GV)
-            roles_dict = {}
             roles_data = [
                 (1, "HT", "HIỆU TRƯỜNG"),
                 (2, "HP", "HIỆU PHÓ"),
@@ -43,8 +42,7 @@ with app.app_context():
             for r_id, r_code, r_name in roles_data:
                 r = Role.query.filter_by(code=r_code).first()
                 if not r:
-                    r = Role(id=r_id, code=r_code, name=r_name)
-                    db.session.add(r)
+                    db.session.add(Role(id=r_id, code=r_code, name=r_name))
             db.session.commit()
             roles_dict = {r.code: r for r in Role.query.all()}
 
@@ -78,7 +76,13 @@ with app.app_context():
                         db.session.add(Criteria(id=idx+1, field_id=f_obj.id, code=m_tc, name=t_tc, description=t_tc, max_score=d_max, display_order=idx+1, is_active=True))
                 db.session.commit()
 
-            # 4. Nạp Giáo viên
+            # 4. Nạp Giáo viên & Gán ID tự tăng cho Tổ CM, Môn học
+            max_d = Department.query.order_by(Department.id.desc()).first()
+            dept_id_cnt = max_d.id if max_d else 0
+
+            max_s = Subject.query.order_by(Subject.id.desc()).first()
+            subj_id_cnt = max_s.id if max_s else 0
+
             if 'GIAOVIEN' in xls.sheet_names:
                 df_gv = pd.read_excel(excel_path, sheet_name='GIAOVIEN')
                 for idx, row in df_gv.iterrows():
@@ -91,13 +95,15 @@ with app.app_context():
 
                     d_obj = Department.query.filter_by(name=tocm).first()
                     if not d_obj:
-                        d_obj = Department(name=tocm)
+                        dept_id_cnt += 1
+                        d_obj = Department(id=dept_id_cnt, name=tocm)
                         db.session.add(d_obj)
                         db.session.commit()
 
                     s_obj = Subject.query.filter_by(name=monday).first()
                     if not s_obj:
-                        s_obj = Subject(code=f"MON_{idx+1}", name=monday)
+                        subj_id_cnt += 1
+                        s_obj = Subject(id=subj_id_cnt, code=f"MON_{subj_id_cnt}", name=monday)
                         db.session.add(s_obj)
                         db.session.commit()
 
@@ -178,7 +184,7 @@ with app.app_context():
                                 db.session.add(TeacherCriteriaEvidence(teacher_criteria_id=tc_obj.id, evidence_id=ev.id))
                 db.session.commit()
 
-            print(">>> ĐÃ NẠP CSDL SIÊU NHANH!", flush=True)
+            print(">>> ĐÃ NẠP CSDL SIÊU NHANH VÀ SỬA LỖI ID THÀNH CÔNG!", flush=True)
 
     except Exception as e:
         print(f">>> LỖI NẠP DỮ LIỆU: {e}", flush=True)

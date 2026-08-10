@@ -13,36 +13,38 @@ db.init_app(app)
 
 from app import models
 
-# 🛠️ NẠP DỮ LIỆU GIÁO VIÊN KHỚP 100% VỚI MODELS.PY
+# 🛠️ NẠP DỮ LIỆU CÓ GÁN ID TỰ TĂNG CHUẨN XÁC CHO SQLITE
 with app.app_context():
     db.create_all()
     try:
         Teacher = models.Teacher
         
-        # 1. Khởi tạo Môn học, Vai trò, Tổ chuyên môn mặc định
+        # 1. Khởi tạo Môn học, Vai trò, Tổ chuyên môn kèm ID=1
         default_subject = models.Subject.query.first()
         if not default_subject:
-            default_subject = models.Subject(code="TIN", name="Tin học")
+            default_subject = models.Subject(id=1, code="TIN", name="Tin học")
             db.session.add(default_subject)
 
         default_role = models.Role.query.filter_by(code="GV").first()
         if not default_role:
-            default_role = models.Role(code="GV", name="GIÁO VIÊN")
+            default_role = models.Role(id=1, code="GV", name="GIÁO VIÊN")
             db.session.add(default_role)
 
         default_dept = models.Department.query.first()
         if not default_dept:
-            default_dept = models.Department(name="Tổ Tổng Hợp")
+            default_dept = models.Department(id=1, name="Tổ Tổng Hợp")
             db.session.add(default_dept)
             
         db.session.commit()
 
-        # 2. Đọc file GV.xlsx
+        # 2. Đọc file GV.xlsx và gán ID tự tăng cho từng Giáo viên
         excel_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'GV.xlsx')
         if os.path.exists(excel_path):
             df = pd.read_excel(excel_path)
-            added_count = 0
+            max_teacher = Teacher.query.order_by(Teacher.id.desc()).first()
+            current_id = max_teacher.id if max_teacher else 0
             
+            added_count = 0
             for _, row in df.iterrows():
                 email_val, magv_val, name_val, pass_val = '', '', '', '123456'
                 
@@ -64,7 +66,9 @@ with app.app_context():
                     ).first()
 
                     if not existing:
+                        current_id += 1
                         gv = Teacher(
+                            id=current_id,
                             magv=final_magv,
                             full_name=name_val if name_val else 'Giáo viên',
                             email=final_email,
@@ -79,7 +83,9 @@ with app.app_context():
             # Bắt buộc tạo tài khoản của cô
             admin_email = 'lethingochon.hoabinh@gmail.com'
             if not Teacher.query.filter(Teacher.email.ilike(admin_email)).first():
+                current_id += 1
                 admin_acc = Teacher(
+                    id=current_id,
                     magv='ADMIN',
                     full_name='Lê Thị Ngọc Hớn',
                     email=admin_email,

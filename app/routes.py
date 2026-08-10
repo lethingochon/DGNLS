@@ -297,7 +297,12 @@ def submit_evidence():
         evidence_title = filename if filename else (url if url else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
 
         if file_path or url:
+            # Tự động tính ID tiếp theo cho Evidence
+            max_ev = Evidence.query.order_by(Evidence.id.desc()).first()
+            new_ev_id = (max_ev.id + 1) if max_ev else 1
+
             ev = Evidence(
+                id=new_ev_id,
                 title=evidence_title,
                 storage_type=storage_type,
                 file_path=file_path,
@@ -306,7 +311,15 @@ def submit_evidence():
             db.session.add(ev)
             db.session.commit()
 
-            tc_ev = TeacherCriteriaEvidence(teacher_criteria_id=tc.id, evidence_id=ev.id)
+            # Tự động tính ID tiếp theo cho TeacherCriteriaEvidence
+            max_tcev = TeacherCriteriaEvidence.query.order_by(TeacherCriteriaEvidence.id.desc()).first()
+            new_tcev_id = (max_tcev.id + 1) if max_tcev else 1
+
+            tc_ev = TeacherCriteriaEvidence(
+                id=new_tcev_id,
+                teacher_criteria_id=tc.id,
+                evidence_id=ev.id
+            )
             db.session.add(tc_ev)
             
             tc.status = "DA_NOP"

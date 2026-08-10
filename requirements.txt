@@ -1,7 +1,6 @@
 Flask
 Flask-SQLAlchemy
-Flask-Login
-PyMySQL
 pandas
 openpyxl
+PyMySQL
 gunicorn

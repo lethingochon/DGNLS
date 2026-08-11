@@ -29,8 +29,6 @@ def login():
         login_input = (request.form.get("email") or request.form.get("username") or "").strip()
         password = request.form.get("password", "").strip()
         
-        print(f"🔑 ĐANG THỬ ĐĂNG NHẬP VỚI: '{login_input}'")
-
         if not login_input:
             flash("Vui lòng nhập Email hoặc Mã GV!", "warning")
             return render_template("login.html")
@@ -43,10 +41,8 @@ def login():
         ).first()
 
         if not teacher:
-            print(f"❌ KẾT QUẢ: Không tìm thấy tài khoản '{login_input}' trong CSDL!")
             flash("Email hoặc Mã GV không tồn tại!", "danger")
         elif not check_password_hash(teacher.password_hash, password):
-            print(f"❌ KẾT QUẢ: Tìm thấy '{teacher.full_name}' nhưng SAI MẬT KHẨU!")
             flash("Mật khẩu không chính xác!", "danger")
         else:
             session["teacher_id"] = teacher.id
@@ -54,8 +50,6 @@ def login():
             session["role_code"] = teacher.role.code if teacher.role else "GV"
             session["role_name"] = teacher.role.name if teacher.role else "GIÁO VIÊN"
             session["dept_name"] = teacher.department.name if teacher.department else ""
-
-            print(f"✅ ĐĂNG NHẬP THÀNH CÔNG: {teacher.full_name} | Vai trò: {session['role_code']}")
 
             if session["role_code"] in ["HT", "HP"]:
                 return redirect(url_for("admin_dashboard"))
@@ -77,13 +71,20 @@ def logout():
 # ----------------------------------------------------
 @app.route("/admin/dashboard")
 def admin_dashboard():
+    teacher_id = session.get("teacher_id")
+    role_code = session.get("role_code")
+
+    if not teacher_id or role_code not in ["HT", "HP"]:
+        flash("Trang này dành riêng cho Ban Giám Hiệu!", "warning")
+        return redirect(url_for("login"))
+
     try:
         all_teachers = Teacher.query.all()
         official_teachers = [
             t for t in all_teachers 
             if not (t.role and t.role.code in ["HT", "HP"]) 
         ]
-        total_teachers = len(official_teachers) if official_teachers else 37
+        total_teachers = len(official_teachers)
         official_teacher_ids = [t.id for t in official_teachers]
 
         total_records = TeacherCriteria.query.filter(TeacherCriteria.teacher_id.in_(official_teacher_ids)).count() if official_teacher_ids else 0
@@ -92,40 +93,50 @@ def admin_dashboard():
 
         school_progress = round((total_approved / total_records) * 100, 1) if total_records > 0 else 0
 
-        target_departments = ["Tổ Tự Nhiên", "Tổ Xã Hội", "Tổ Tổng Hợp", "Tổ Ngoại Ngữ"]
+        departments = Department.query.all()
         dept_stats = []
 
-        for dept_name in target_departments:
-            clean_keyword = dept_name.replace("Tổ ", "").strip()
-            dept_obj = Department.query.filter(Department.name.ilike(f"%{clean_keyword}%")).first()
-            
-            dept_teachers = [t for t in official_teachers if t.department_id == dept_obj.id] if dept_obj else []
+        for dept in departments:
+            dept_teachers = [t for t in official_teachers if t.department_id == dept.id]
             dept_teacher_ids = [t.id for t in dept_teachers]
             
-            leader = next((t for t in dept_teachers if t.role and t.role.code == "TT"), None)
+            leader = Teacher.query.filter_by(department_id=dept.id).join(Role).filter(Role.code == "TT").first()
             leader_name = leader.full_name if leader else "Chưa phân công"
 
             if dept_teacher_ids:
-                dept_records = TeacherCriteria.query.filter(TeacherCriteria.teacher_id.in_(dept_teacher_ids)).count()
-                dept_approved = TeacherCriteria.query.filter(TeacherCriteria.teacher_id.in_(dept_teacher_ids), TeacherCriteria.status == "DA_XAC_NHAN").count()
-                dept_pending = TeacherCriteria.query.filter(TeacherCriteria.teacher_id.in_(dept_teacher_ids), TeacherCriteria.status == "DA_NOP").count()
+                dept_total_crit = TeacherCriteria.query.filter(TeacherCriteria.teacher_id.in_(dept_teacher_ids)).count()
+                dept_reviewed = TeacherCriteria.query.filter(
+                    TeacherCriteria.teacher_id.in_(dept_teacher_ids),
+                    TeacherCriteria.status.in_(["DA_XAC_NHAN", "TU_CHOI"])
+                ).count()
+                dept_pending = TeacherCriteria.query.filter(
+                    TeacherCriteria.teacher_id.in_(dept_teacher_ids),
+                    TeacherCriteria.status == "DA_NOP"
+                ).count()
+                dept_approved = TeacherCriteria.query.filter(
+                    TeacherCriteria.teacher_id.in_(dept_teacher_ids),
+                    TeacherCriteria.status == "DA_XAC_NHAN"
+                ).count()
             else:
-                dept_records, dept_approved, dept_pending = 0, 0, 0
+                dept_total_crit, dept_reviewed, dept_pending, dept_approved = 0, 0, 0, 0
 
-            dept_progress = round((dept_approved / dept_records) * 100) if dept_records > 0 else 0
+            dept_progress = round((dept_approved / dept_total_crit) * 100, 1) if dept_total_crit > 0 else 0
 
             dept_stats.append({
-                "name": dept_name,
+                "id": dept.id,
+                "name": dept.name,
                 "teacher_count": len(dept_teachers),
                 "leader": leader_name,
-                "approved": dept_approved,
+                "total_crit": dept_total_crit,
+                "reviewed": dept_reviewed,
                 "pending": dept_pending,
+                "approved": dept_approved,
                 "progress": dept_progress
             })
 
     except Exception as e:
         print("LỖI DASHBOARD BGH:", e)
-        total_teachers, total_approved, total_pending, school_progress = 37, 0, 0, 0
+        total_teachers, total_approved, total_pending, school_progress = 0, 0, 0, 0
         dept_stats = []
 
     return render_template(
@@ -297,7 +308,6 @@ def submit_evidence():
         evidence_title = filename if filename else (url if url else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
 
         if file_path or url:
-            # Tự động tính ID tiếp theo cho Evidence
             max_ev = Evidence.query.order_by(Evidence.id.desc()).first()
             new_ev_id = (max_ev.id + 1) if max_ev else 1
 
@@ -311,7 +321,6 @@ def submit_evidence():
             db.session.add(ev)
             db.session.commit()
 
-            # Tự động tính ID tiếp theo cho TeacherCriteriaEvidence
             max_tcev = TeacherCriteriaEvidence.query.order_by(TeacherCriteriaEvidence.id.desc()).first()
             new_tcev_id = (max_tcev.id + 1) if max_tcev else 1
 
@@ -393,56 +402,81 @@ def department_review():
 
     dept_id = current_teacher.department_id
     if not dept_id:
-        return render_template("department/review.html", grouped_reviews=[])
+        return render_template("department/review.html", grouped_reviews=[], dept_name="Tổ Chuyên Môn")
 
-    teachers_in_dept = Teacher.query.filter_by(department_id=dept_id).filter(Teacher.id != current_teacher.id).all()
+    teachers_in_dept = Teacher.query.filter_by(department_id=dept_id).all()
 
     grouped_reviews = []
-    for teacher in teachers_in_dept:
-        tcs = TeacherCriteria.query.filter(
-            TeacherCriteria.teacher_id == teacher.id,
-            TeacherCriteria.status != "CHUA_NOP"
-        ).all()
+    total_dept_approved = 0
+    total_dept_pending = 0
 
-        if not tcs:
-            continue
+    for teacher in teachers_in_dept:
+        tcs = TeacherCriteria.query.filter_by(teacher_id=teacher.id).all()
+
+        total_crit = len(tcs)
+        approved_count = 0
+        pending_count = 0
+        rejected_count = 0
+        not_submitted_count = 0
 
         criterias_list = []
-        pending_count = 0
         for tc in tcs:
-            if tc.status == "DA_NOP":
+            if tc.status == "DA_XAC_NHAN":
+                approved_count += 1
+            elif tc.status == "DA_NOP":
                 pending_count += 1
+            elif tc.status == "TU_CHOI":
+                rejected_count += 1
+            else:
+                not_submitted_count += 1
 
-            evidences = []
-            tc_evs = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=tc.id).all()
-            for tcev in tc_evs:
-                if tcev.evidence:
-                    evidences.append({
-                        "file_path": tcev.evidence.file_path,
-                        "url": tcev.evidence.url
-                    })
+            if tc.status != "CHUA_NOP":
+                evidences = []
+                tc_evs = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=tc.id).all()
+                for tcev in tc_evs:
+                    if tcev.evidence:
+                        evidences.append({
+                            "file_path": tcev.evidence.file_path,
+                            "url": tcev.evidence.url
+                        })
 
-            criterias_list.append({
-                "id": tc.id,
-                "criteria_code": tc.criteria.code if tc.criteria else "",
-                "criteria_name": tc.criteria.name if tc.criteria else "",
-                "status": tc.status,
-                "feedback": tc.feedback,
-                "submitted_at": tc.submitted_at,
-                "reviewed_at": tc.reviewed_at,
-                "evidences": evidences
-            })
+                criterias_list.append({
+                    "id": tc.id,
+                    "criteria_code": tc.criteria.code if tc.criteria else "",
+                    "criteria_name": tc.criteria.name if tc.criteria else "",
+                    "status": tc.status,
+                    "feedback": tc.feedback,
+                    "submitted_at": tc.submitted_at,
+                    "reviewed_at": tc.reviewed_at,
+                    "evidences": evidences
+                })
+
+        progress = round((approved_count / total_crit) * 100, 1) if total_crit > 0 else 0
+
+        total_dept_approved += approved_count
+        total_dept_pending += pending_count
 
         grouped_reviews.append({
             "teacher_id": teacher.id,
             "teacher_name": teacher.full_name,
             "teacher_magv": teacher.magv,
-            "total_submitted": len(criterias_list),
+            "subject_name": teacher.subject.name if teacher.subject else "",
+            "total_crit": total_crit,
+            "approved_count": approved_count,
             "pending_count": pending_count,
+            "rejected_count": rejected_count,
+            "not_submitted_count": not_submitted_count,
+            "progress": progress,
             "criterias": criterias_list
         })
 
-    return render_template("department/review.html", grouped_reviews=grouped_reviews)
+    return render_template(
+        "department/review.html",
+        grouped_reviews=grouped_reviews,
+        dept_name=current_teacher.department.name if current_teacher.department else "Tổ Chuyên Môn",
+        total_dept_approved=total_dept_approved,
+        total_dept_pending=total_dept_pending
+    )
 
 @app.route("/admin/manage-teachers")
 def manage_teachers():

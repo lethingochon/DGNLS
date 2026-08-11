@@ -1,217 +1,201 @@
 {% extends "base.html" %}
-{% block title %}Duyệt Minh Chứng Tổ Chuyên Môn{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-0">
-    <!-- Header -->
-    <div class="card border-0 text-white p-4 mb-4 shadow-sm" style="background: linear-gradient(135deg, #0b192c 0%, #1e3e62 100%); border-radius: 16px;">
-        <h3 class="fw-bold mb-1">🔍 Thẩm Định Minh Chứng - {{ session.get('dept_name', 'Tổ Chuyên Môn') }}</h3>
-        <p class="text-white-50 mb-0">Rà soát và xác nhận hồ sơ năng lực số theo từng giáo viên trong tổ.</p>
+<div class="container-fluid py-4">
+    <!-- BANNER TỔ TRƯỜNG -->
+    <div class="card bg-primary text-white shadow-sm border-0 mb-4" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="fw-bold mb-1"><i class="bi bi-shield-check me-2"></i>Thẩm Định Minh Chứng - {{ dept_name }}</h3>
+                    <p class="mb-0 text-white-50">Theo dõi tiến độ số hóa hồ sơ sư phạm và phê duyệt chuẩn nghề nghiệp giáo viên trong tổ.</p>
+                </div>
+                <div class="d-flex gap-3">
+                    <div class="text-center bg-white bg-opacity-10 p-3 rounded-3">
+                        <div class="fs-4 fw-bold text-warning">{{ total_dept_pending }}</div>
+                        <div class="small">Chờ duyệt</div>
+                    </div>
+                    <div class="text-center bg-white bg-opacity-10 p-3 rounded-3">
+                        <div class="fs-4 fw-bold text-success">{{ total_dept_approved }}</div>
+                        <div class="small">Đã đạt chuẩn</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Danh sách Accordion Giáo Viên -->
-    {% if grouped_reviews and grouped_reviews|length > 0 %}
-        <div class="accordion d-flex flex-column gap-3" id="accordionTeachers">
-            {% for g in grouped_reviews %}
-            <div class="accordion-item border-0 shadow-sm rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading-{{ g.teacher_id }}">
-                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3 px-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ g.teacher_id }}">
-                        <div class="d-flex align-items-center justify-content-between w-100 me-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="fs-5">👨‍🏫</span>
-                                <div>
-                                    <span class="fw-bold text-dark fs-6">{{ g.teacher_name }}</span>
-                                    <span class="badge bg-light text-secondary border ms-2">{{ g.teacher_magv }}</span>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill">
-                                    Đã nộp: <b>{{ g.total_submitted }}</b> tiêu chí
-                                </span>
-                                {% if g.pending_count > 0 %}
-                                    <span class="badge bg-warning text-dark border border-warning px-3 py-2 rounded-pill">
-                                        ⏳ <b>{{ g.pending_count }}</b> chờ duyệt
-                                    </span>
+    <!-- TỔNG QUAN TIẾN ĐỘ THÀNH VIÊN TRONG TỔ -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-people-fill me-2 text-primary"></i>Danh Sách & Tiến Độ Tiến Hành Của Thành Viên Trong Tổ</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="width: 5%;">STT</th>
+                            <th style="width: 25%;">Họ và Tên Giáo Viên</th>
+                            <th style="width: 15%;">Môn Dạy</th>
+                            <th style="width: 15%; text-align: center;">Trạng Thái Hồ Sơ</th>
+                            <th style="width: 25%;">Tiến Độ Đạt Chuẩn</th>
+                            <th class="text-end pe-3" style="width: 15%;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in grouped_reviews %}
+                        <tr>
+                            <td class="ps-3 fw-bold text-muted">{{ loop.index }}</td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ item.teacher_name }}</div>
+                                <span class="badge bg-light text-secondary border" style="font-size: 0.75rem;">Mã: {{ item.teacher_magv }}</span>
+                            </td>
+                            <td><span class="badge bg-info bg-opacity-10 text-info border border-info">{{ item.subject_name }}</span></td>
+                            <td class="text-center">
+                                {% if item.pending_count > 0 %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>{{ item.pending_count }} bài chờ duyệt</span>
                                 {% else %}
-                                    <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
-                                        ✓ Hoàn thành
-                                    </span>
+                                    <span class="badge bg-secondary opacity-75"><i class="bi bi-check-all me-1"></i>Không bài chờ</span>
                                 {% endif %}
-                            </div>
-                        </div>
-                    </button>
-                </h2>
-                <div id="collapse-{{ g.teacher_id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#accordionTeachers">
-                    <div class="accordion-body p-0 border-top">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-4">TIÊU CHÍ</th>
-                                        <th>MINH CHỨNG</th>
-                                        <th>TRẠNG THÁI</th>
-                                        <th class="text-end pe-4">THAO TÁC</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in g.criterias %}
-                                    <tr>
-                                        <td class="ps-4" style="max-width: 320px;">
-                                            <span class="badge bg-primary me-1">{{ item.criteria_code }}</span>
-                                            <span class="fw-semibold text-dark">{{ item.criteria_name }}</span>
-                                            {% if item.feedback %}
-                                                <div class="small text-muted mt-1">💬 <b>Phản hồi:</b> {{ item.feedback }}</div>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if item.evidences and item.evidences|length > 0 %}
-                                                <div class="d-flex flex-wrap gap-1">
-                                                    {% for ev in item.evidences %}
-                                                        {% if ev.file_path %}
-                                                            <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2 fw-semibold" onclick="previewFile('{{ ev.file_path | replace('\\', '/') }}', '{{ item.criteria_code }}')">
-                                                                👁️ File {{ loop.index }}
-                                                            </button>
-                                                        {% elif ev.url %}
-                                                            <a href="{{ ev.url }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 fw-semibold">
-                                                                🔗 Link {{ loop.index }}
-                                                            </a>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </div>
-                                            {% else %}
-                                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">⚠️ Chưa đính kèm file</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if item.status == 'DA_XAC_NHAN' %}
-                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">✓ Đã duyệt</span>
-                                            {% elif item.status == 'TU_CHOI' %}
-                                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">⏳ Chờ GV sửa</span>
-                                            {% else %}
-                                                <span class="badge bg-warning text-dark border border-warning px-2 py-1">⏳ Chờ duyệt</span>
-                                            {% endif %}
-
-                                            {% if item.submitted_at %}
-                                                <div class="small text-muted mt-1" style="font-size: 11px;">
-                                                    📤 <b>Nộp:</b> {{ item.submitted_at.strftime('%H:%M %d/%m/%Y') }}
-                                                </div>
-                                            {% endif %}
-                                            {% if item.reviewed_at %}
-                                                <div class="small text-muted" style="font-size: 11px;">
-                                                    ✅ <b>Duyệt:</b> {{ item.reviewed_at.strftime('%H:%M %d/%m/%Y') }}
-                                                </div>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <button class="btn btn-sm btn-success fw-bold px-2 me-1" onclick="openReviewModal({{ item.id }}, 'DA_XAC_NHAN', '{{ g.teacher_name }}')">
-                                                ✓ Phê duyệt
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-warning text-dark fw-bold px-2" onclick="openReviewModal({{ item.id }}, 'TU_CHOI', '{{ g.teacher_name }}')">
-                                                ↩️ Yêu cầu sửa
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                    <span><strong class="text-success">{{ item.approved_count }}</strong>/{{ item.total_crit }} tiêu chí đạt</span>
+                                    <strong class="text-primary">{{ item.progress }}%</strong>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ item.progress }}%"></div>
+                                </div>
+                            </td>
+                            <td class="text-end pe-3">
+                                <a href="#teacher-block-{{ item.teacher_id }}" class="btn btn-sm btn-outline-primary fw-bold">
+                                    <i class="bi bi-search me-1"></i>Xem & Duyệt
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 14px;">
-            <h5>Tổ chưa có hồ sơ minh chứng nào cần thẩm định.</h5>
-        </div>
-    {% endif %}
-</div>
-
-<!-- MODAL PHẢN HỒI -->
-<div class="modal fade" id="reviewModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title fw-bold" id="reviewModalTitle">Đánh Giá Minh Chứng</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="/department/update-status" method="POST">
-                <div class="modal-body">
-                    <input type="hidden" name="record_id" id="reviewRecordId">
-                    <input type="hidden" name="status" id="reviewStatus">
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Ghi chú / Phản hồi cho Giáo viên:</label>
-                        <textarea class="form-control" name="feedback" rows="3" placeholder="Nhập nhận xét hoặc nội dung yêu cầu giáo viên bổ sung..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary fw-bold">Xác Nhận</button>
-                </div>
-            </form>
         </div>
     </div>
-</div>
 
-<!-- MODAL MẮT THẦN 👁️ XEM TỆP TRỰC TIẾP -->
-<div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 90vw;">
-        <div class="modal-content border-0 shadow" style="height: 85vh;">
-            <div class="modal-header bg-dark text-white py-2">
-                <h6 class="modal-title fw-bold" id="previewTitle">👁️ Xem Minh Chứng</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <!-- DANH SÁCH DUYỆT CHI TIẾT TỪNG GIÁO VIÊN -->
+    <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-journal-check me-2 text-success"></i>Chi Tiết Tiêu Chí Đã Nộp Cần Thẩm Định</h5>
+    
+    {% for item in grouped_reviews %}
+    <div class="card shadow-sm border-0 mb-3" id="teacher-block-{{ item.teacher_id }}">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#collapse-{{ item.teacher_id }}">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-circle fs-4 text-primary"></i>
+                <h6 class="fw-bold mb-0 text-dark">{{ item.teacher_name }}</h6>
+                <span class="badge bg-light text-muted border">{{ item.teacher_magv }}</span>
             </div>
-            <div class="modal-body p-0 bg-secondary bg-opacity-10 d-flex justify-content-center align-items-center" id="previewBody"></div>
+            <div class="d-flex align-items-center gap-2">
+                {% if item.pending_count > 0 %}
+                    <span class="badge bg-warning text-dark">{{ item.pending_count }} chờ duyệt</span>
+                {% endif %}
+                <span class="badge bg-success">{{ item.progress }}% Hoàn thành</span>
+                <i class="bi bi-chevron-down ms-2"></i>
+            </div>
+        </div>
+
+        <div class="collapse show" id="collapse-{{ item.teacher_id }}">
+            <div class="card-body p-0">
+                {% if item.criterias %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light small">
+                            <tr>
+                                <th style="width: 35%;">TIÊU CHÍ</th>
+                                <th style="width: 20%;">MINH CHỨNG</th>
+                                <th style="width: 20%;">TRẠNG THÁI</th>
+                                <th class="text-end pe-3" style="width: 25%;">THAO TÁC THẨM ĐỊNH</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in item.criterias %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary me-1">{{ c.criteria_code }}</span>
+                                    <span class="fw-semibold text-dark">{{ c.criteria_name }}</span>
+                                </td>
+                                <td>
+                                    {% if c.evidences %}
+                                        {% for ev in c.evidences %}
+                                            {% if ev.file_path %}
+                                                <a href="{{ ev.file_path }}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2 mb-1">
+                                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>Xem Tệp
+                                                </a>
+                                            {% endif %}
+                                            {% if ev.url %}
+                                                <a href="{{ ev.url }}" target="_blank" class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2 mb-1">
+                                                    <i class="bi bi-link-45deg me-1"></i>Link
+                                                </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted small">Chưa đính kèm</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if c.status == 'DA_XAC_NHAN' %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đạt Chuẩn</span>
+                                    {% elif c.status == 'DA_NOP' %}
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Chờ duyệt</span>
+                                    {% elif c.status == 'TU_CHOI' %}
+                                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Yêu cầu sửa</span>
+                                    {% endif %}
+                                    {% if c.feedback %}
+                                        <div class="small text-danger mt-1"><i>Lời nhắn: {{ c.feedback }}</i></div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3">
+                                    <form action="{{ url_for('update_status') }}" method="POST" class="d-inline-flex gap-1">
+                                        <input type="hidden" name="record_id" value="{{ c.id }}">
+                                        <button type="submit" name="status" value="DA_XAC_NHAN" class="btn btn-sm btn-success py-1">
+                                            <i class="bi bi-check-lg me-1"></i>Phê duyệt
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-1" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ c.id }}">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Yêu cầu sửa
+                                        </button>
+                                    </form>
+
+                                    <!-- MODAL BÁO SỬA BÀI -->
+                                    <div class="modal fade text-start" id="rejectModal-{{ c.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <form action="{{ url_for('update_status') }}" method="POST">
+                                                    <input type="hidden" name="record_id" value="{{ c.id }}">
+                                                    <input type="hidden" name="status" value="TU_CHOI">
+                                                    <div class="modal-header">
+                                                        <h6 class="modal-header-title fw-bold">Yêu cầu bổ sung minh chứng: {{ c.criteria_code }}</h6>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <label class="form-label small fw-bold">Lý do/Nội dung cần bổ sung:</label>
+                                                        <textarea name="feedback" class="form-area form-control" rows="3" required placeholder="Nhập lý do chưa đạt chuẩn..."></textarea>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                                        <button type="submit" class="btn btn-sm btn-danger">Gửi Yêu Cầu</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-3 text-center text-muted small">Giáo viên chưa gửi bài minh chứng nào.</div>
+                {% endif %}
+            </div>
         </div>
     </div>
+    {% endfor %}
 </div>
-
-<script>
-function openReviewModal(recordId, status, teacherName) {
-    document.getElementById('reviewRecordId').value = recordId;
-    document.getElementById('reviewStatus').value = status;
-    document.getElementById('reviewModalTitle').innerText = (status === 'DA_XAC_NHAN' ? '✓ Duyệt Minh Chứng: ' : '↩️ Yêu Cầu Sửa: ') + teacherName;
-    new bootstrap.Modal(document.getElementById('reviewModal')).show();
-}
-
-function previewFile(filePath, code) {
-    const body = document.getElementById('previewBody');
-    document.getElementById('previewTitle').innerText = '👁️ Minh Chứng Tiêu Chí: ' + code;
-    
-    const ext = filePath.split('.').pop().toLowerCase();
-    const fullPath = '/' + filePath;
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-        body.innerHTML = `<img src="${fullPath}" class="img-fluid rounded shadow" style="max-height: 100%; object-fit: contain;">`;
-    } else if (ext === 'pdf') {
-        body.innerHTML = `<iframe src="${fullPath}" style="width: 100%; height: 100%; border: none;"></iframe>`;
-    } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
-        if (isLocal) {
-            body.innerHTML = `
-                <div class="text-center p-5 bg-white rounded shadow-sm">
-                    <div class="fs-1 mb-2">📄</div>
-                    <h5 class="fw-bold text-dark">Tập tin Office: .${ext.toUpperCase()}</h5>
-                    <p class="text-muted small">Đang chạy môi trường nội bộ (Localhost). Vui lòng tải về hoặc mở trực tiếp để xem nội dung.</p>
-                    <div class="d-flex justify-content-center gap-2 mt-3">
-                        <a href="${fullPath}" target="_blank" class="btn btn-primary fw-bold">📖 Mở File Trực Tiếp</a>
-                        <a href="${fullPath}" download class="btn btn-outline-secondary fw-bold">📥 Tải Về Máy</a>
-                    </div>
-                </div>`;
-        } else {
-            const absoluteUrl = window.location.origin + fullPath;
-            const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
-            body.innerHTML = `<iframe src="${googleDocsUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
-        }
-    } else {
-        body.innerHTML = `<div class="text-center p-5 bg-white rounded shadow-sm">
-            <h5>Định dạng file (.${ext}) cần tải về máy để xem.</h5>
-            <a href="${fullPath}" download class="btn btn-primary mt-3">📥 Tải về máy</a>
-        </div>`;
-    }
-    
-    new bootstrap.Modal(document.getElementById('previewModal')).show();
-}
-</script>
 {% endblock %}

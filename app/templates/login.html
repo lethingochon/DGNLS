@@ -2,19 +2,55 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <!-- Thẻ quan trọng giúp giao diện phóng to tự động vừa khít màn hình điện thoại -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Đăng nhập DigiTeacher</title>
+
+    <!-- Khai báo Icon hiển thị ngoài Màn hình chính điện thoại -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='logo_dgnls.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='logo_dgnls.png') }}">
+    <meta name="apple-mobile-web-app-title" content="DGNLS">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0d6efd">
+
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        /* Đặt font-size 16px giúp iPhone không tự động phóng to màn hình khi chạm gõ */
+        .form-control {
+            padding: 12px;
+            font-size: 16px;
+        }
+        .btn-primary {
+            padding: 12px;
+            font-size: 16px;
+        }
+    </style>
 </head>
 
 <body class="bg-light">
 
-<div class="container">
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-4">
+<div class="container py-3">
+    <div class="row justify-content-center align-items-center">
+        <!-- Co giãn thông minh: Toàn màn hình trên điện thoại (col-12), gọn gàng trên máy tính (col-lg-4) -->
+        <div class="col-12 col-sm-10 col-md-6 col-lg-4">
             <div class="card shadow border-0">
 
-                <div class="card-header text-center bg-primary text-white">
-                    <h3 class="mb-0 font-weight-bold">DigiTeacher</h3>
+                <div class="card-header text-center bg-primary text-white py-3">
+                    <h3 class="mb-0 fw-bold">DigiTeacher</h3>
+                    <small class="text-white-50">Đánh Giá Năng Lực Số</small>
                 </div>
 
                 <div class="card-body p-4">
@@ -32,16 +68,16 @@
 
                     <form action="/login" method="post">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Email hoặc Mã GV</label>
-                            <input type="text" name="email" class="form-control" placeholder="Nhập Email hoặc Mã GV..." required>
+                            <label class="form-label fw-bold text-dark">Email hoặc Mã GV</label>
+                            <input type="text" name="email" class="form-control" placeholder="Nhập Email hoặc Mã GV..." required autofocus>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark">Mật khẩu</label>
                             <input type="password" name="password" class="form-control" placeholder="••••••" required>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100 fw-bold">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
                             Đăng nhập
                         </button>
 

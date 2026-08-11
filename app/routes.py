@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import os
 import io
 import pandas as pd
@@ -7,7 +7,13 @@ from flask import render_template, request, redirect, url_for, session, flash, s
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 
-# Thư viện Cloudinary lưu file vĩnh viễn trên mây
+# Múi giờ Việt Nam (UTC+7)
+VN_TZ = timezone(timedelta(hours=7))
+
+def get_vn_now():
+    return datetime.now(VN_TZ)
+
+# Thư viện Cloudinary
 import cloudinary
 import cloudinary.uploader
 
@@ -304,7 +310,6 @@ def submit_evidence():
         if file and file.filename != "":
             filename = secure_filename(file.filename)
             try:
-                # Cấu hình upload lên Cloudinary cho phép hiển thị trực tiếp PDF/ảnh
                 upload_result = cloudinary.uploader.upload(
                     file,
                     resource_type="auto",
@@ -313,7 +318,6 @@ def submit_evidence():
                     unique_filename=True,
                     flags="attachment:false"
                 )
-                # Lấy đường link HTTPS lưu vĩnh viễn trên mây
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"
             except Exception as e:
@@ -348,7 +352,7 @@ def submit_evidence():
             db.session.add(tc_ev)
             
             tc.status = "DA_NOP"
-            tc.submitted_at = datetime.now()
+            tc.submitted_at = get_vn_now()
             tc.feedback = None
             db.session.commit()
 
@@ -392,7 +396,7 @@ def update_status():
     if tc:
         tc.status = status
         tc.feedback = feedback
-        tc.reviewed_at = datetime.now()
+        tc.reviewed_at = get_vn_now()
         db.session.commit()
 
     return redirect(request.referrer or url_for("department_review"))

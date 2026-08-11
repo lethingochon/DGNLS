@@ -52,8 +52,11 @@ with app.app_context():
                 for idx, row in df_lv.iterrows():
                     m_lv = str(row.get('MÃ LV', f'LV{idx+1}')).strip()
                     t_lv = str(row.get('TÊN LĨNH VỰC', '')).strip()
-                    if not Field.query.filter_by(code=m_lv).first():
+                    f_exist = Field.query.filter_by(code=m_lv).first()
+                    if not f_exist:
                         db.session.add(Field(id=idx+1, code=m_lv, name=t_lv))
+                    else:
+                        f_exist.name = t_lv # Cập nhật lại tên nếu có thay đổi
                 db.session.commit()
 
             default_field = Field.query.first()
@@ -62,7 +65,7 @@ with app.app_context():
                 db.session.add(default_field)
                 db.session.commit()
 
-            # 3. Nạp Tiêu chí
+            # 3. Nạp Tiêu chí & CẬP NHẬT LẠI ĐÚNG LĨNH VỰC
             if 'TIEUCHI' in xls.sheet_names:
                 df_tc = pd.read_excel(excel_path, sheet_name='TIEUCHI')
                 for idx, row in df_tc.iterrows():
@@ -72,8 +75,14 @@ with app.app_context():
                     d_max = float(row.get('DIEMTOIDA', 10.0)) if pd.notnull(row.get('DIEMTOIDA')) else 10.0
                     
                     f_obj = Field.query.filter_by(code=m_lv).first() or default_field
-                    if not Criteria.query.filter_by(code=m_tc).first():
+                    tc_obj = Criteria.query.filter_by(code=m_tc).first()
+                    
+                    if not tc_obj:
                         db.session.add(Criteria(id=idx+1, field_id=f_obj.id, code=m_tc, name=t_tc, description=t_tc, max_score=d_max, display_order=idx+1, is_active=True))
+                    else:
+                        # ÉP CẬP NHẬT LẠI ĐÚNG LĨNH VỰC CHO TIÊU CHÍ CŨ
+                        tc_obj.field_id = f_obj.id
+                        tc_obj.name = t_tc
                 db.session.commit()
 
             # 4. Nạp Giáo viên & Gán ID tự tăng cho Tổ CM, Môn học

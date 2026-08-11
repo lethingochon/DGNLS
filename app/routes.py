@@ -7,6 +7,10 @@ from flask import render_template, request, redirect, url_for, session, flash, s
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 
+# Thư viện Cloudinary lưu file vĩnh viễn trên mây
+import cloudinary
+import cloudinary.uploader
+
 from app import app, db
 from app.models import (
     Teacher, 
@@ -299,11 +303,20 @@ def submit_evidence():
 
         if file and file.filename != "":
             filename = secure_filename(file.filename)
-            upload_dir = os.path.join(app.root_path, "static", "uploads")
-            os.makedirs(upload_dir, exist_ok=True)
-            file_path = f"/uploads/{filename}"
-            file.save(os.path.join(upload_dir, filename))
-            storage_type = "FILE"
+            try:
+                # Tải thẳng file lên Cloudinary
+                upload_result = cloudinary.uploader.upload(
+                    file,
+                    resource_type="auto",
+                    folder="minh_chung_dgnls"
+                )
+                # Lấy đường link HTTPS lưu vĩnh viễn trên mây
+                file_path = upload_result.get("secure_url")
+                storage_type = "FILE"
+            except Exception as e:
+                print("LỖI UPLOAD CLOUDINARY:", e)
+                flash("Có lỗi khi nộp file lên kho lưu trữ!", "danger")
+                return redirect(url_for("my_criteria"))
 
         evidence_title = filename if filename else (url if url else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
 
@@ -349,15 +362,6 @@ def delete_evidence(tc_id, evidence_id):
         tc_ev = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=tc.id, evidence_id=evidence_id).first()
         if tc_ev:
             ev = Evidence.query.get(evidence_id)
-            if ev and ev.file_path:
-                clean_name = ev.file_path.replace("/uploads/", "").replace("static/uploads/", "")
-                abs_path = os.path.join(app.root_path, "static", "uploads", clean_name)
-                if os.path.exists(abs_path):
-                    try:
-                        os.remove(abs_path)
-                    except Exception as e:
-                        print("Lỗi xóa file:", e)
-
             db.session.delete(tc_ev)
             if ev:
                 db.session.delete(ev)

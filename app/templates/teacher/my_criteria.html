@@ -85,7 +85,7 @@
                                         {% for ev in item.evidences %}
                                             <div class="d-flex align-items-center gap-1">
                                                 {% if ev.file_path %}
-                                                    <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2" onclick="previewFile('{{ ev.file_path | replace('\\', '/') }}', '{{ item.criteria_code }}')">
+                                                    <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2" onclick="previewFile('{{ ev.file_path }}', '{{ item.criteria_code }}', '{{ ev.title }}')">
                                                         👁️ File {{ loop.index }}
                                                     </button>
                                                 {% elif ev.url %}
@@ -178,39 +178,38 @@ function openUploadModal(criteriaId, title) {
     new bootstrap.Modal(document.getElementById('uploadModal')).show();
 }
 
-function previewFile(filePath, code) {
+function previewFile(filePath, code, fileName) {
     const body = document.getElementById('previewBody');
     document.getElementById('previewTitle').innerText = '👁️ Minh Chứng Tiêu Chí: ' + code;
     
-    const ext = filePath.split('.').pop().toLowerCase();
-    const fullPath = '/' + filePath;
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // Tự động xử lý đường dẫn Cloudinary hoặc file nội bộ
+    let cleanUrl = filePath;
+    if (cleanUrl.includes('http')) {
+        cleanUrl = cleanUrl.substring(cleanUrl.indexOf('http'));
+    } else {
+        cleanUrl = '/' + cleanUrl.replace(/^\/+/, '');
+    }
+
+    // Xác định đuôi file
+    let ext = '';
+    if (fileName && fileName.includes('.')) {
+        ext = fileName.split('.').pop().toLowerCase();
+    } else {
+        ext = cleanUrl.split('?')[0].split('.').pop().toLowerCase();
+    }
 
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-        body.innerHTML = `<img src="${fullPath}" class="img-fluid rounded shadow" style="max-height: 100%; object-fit: contain;">`;
+        body.innerHTML = `<img src="${cleanUrl}" class="img-fluid rounded shadow" style="max-height: 100%; object-fit: contain;">`;
     } else if (ext === 'pdf') {
-        body.innerHTML = `<iframe src="${fullPath}" style="width: 100%; height: 100%; border: none;"></iframe>`;
+        body.innerHTML = `<iframe src="${cleanUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
     } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
-        if (isLocal) {
-            body.innerHTML = `
-                <div class="text-center p-5 bg-white rounded shadow-sm">
-                    <div class="fs-1 mb-2">📄</div>
-                    <h5 class="fw-bold text-dark">Tập tin Office: .${ext.toUpperCase()}</h5>
-                    <p class="text-muted small">Đang chạy môi trường nội bộ (Localhost). Vui lòng tải về hoặc mở trực tiếp để xem nội dung.</p>
-                    <div class="d-flex justify-content-center gap-2 mt-3">
-                        <a href="${fullPath}" target="_blank" class="btn btn-primary fw-bold">📖 Mở File Trực Tiếp</a>
-                        <a href="${fullPath}" download class="btn btn-outline-secondary fw-bold">📥 Tải Về Máy</a>
-                    </div>
-                </div>`;
-        } else {
-            const absoluteUrl = window.location.origin + fullPath;
-            const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(absoluteUrl)}&embedded=true`;
-            body.innerHTML = `<iframe src="${googleDocsUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
-        }
+        // Tệp Office mở bằng Google Docs Viewer
+        const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(cleanUrl)}&embedded=true`;
+        body.innerHTML = `<iframe src="${googleDocsUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
     } else {
         body.innerHTML = `<div class="text-center p-5 bg-white rounded shadow-sm">
-            <h5>Định dạng file (.${ext}) cần tải về máy để xem.</h5>
-            <a href="${fullPath}" download class="btn btn-primary mt-3">📥 Tải về máy</a>
+            <h5>Tệp minh chứng cần tải về máy để xem.</h5>
+            <a href="${cleanUrl}" target="_blank" class="btn btn-primary mt-3">📖 Mở / Tải Về Máy</a>
         </div>`;
     }
     

@@ -4,3 +4,4 @@ pandas
 openpyxl
 PyMySQL
 gunicorn
+cloudinary

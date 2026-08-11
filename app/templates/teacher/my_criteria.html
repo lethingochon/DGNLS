@@ -123,7 +123,6 @@
         </div>
     </div>
 </div>
-
 <!-- MODAL 1: NỘP MINH CHỨNG -->
 <div class="modal fade" id="uploadModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -182,7 +181,7 @@ function previewFile(filePath, code, fileName) {
     const body = document.getElementById('previewBody');
     document.getElementById('previewTitle').innerText = '👁️ Minh Chứng Tiêu Chí: ' + code;
     
-    // Tự động xử lý đường dẫn Cloudinary hoặc file nội bộ
+    // Làm sạch URL Cloudinary hoặc đường dẫn nội bộ
     let cleanUrl = filePath;
     if (cleanUrl.includes('http')) {
         cleanUrl = cleanUrl.substring(cleanUrl.indexOf('http'));
@@ -190,7 +189,7 @@ function previewFile(filePath, code, fileName) {
         cleanUrl = '/' + cleanUrl.replace(/^\/+/, '');
     }
 
-    // Xác định đuôi file
+    // Tách đuôi file
     let ext = '';
     if (fileName && fileName.includes('.')) {
         ext = fileName.split('.').pop().toLowerCase();
@@ -199,20 +198,21 @@ function previewFile(filePath, code, fileName) {
     }
 
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        // Tệp là Ảnh
         body.innerHTML = `<img src="${cleanUrl}" class="img-fluid rounded shadow" style="max-height: 100%; object-fit: contain;">`;
-    } else if (ext === 'pdf' || cleanUrl.endsWith('.pdf')) {
-        const googlePdfUrl = `https://docs.google.com/gview?url=${encodeURIComponent(cleanUrl)}&embedded=true`;
+    } else if (ext === 'pdf' || cleanUrl.toLowerCase().includes('.pdf')) {
+        // Tệp PDF: Mở iframe trực tiếp kết hợp nút dự phòng
         body.innerHTML = `
             <div class="w-100 h-100 d-flex flex-column">
                 <div class="p-2 bg-light text-end border-bottom">
-                    <a href="${cleanUrl}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                    <a href="${cleanUrl}" target="_blank" class="btn btn-sm btn-primary fw-bold">
                         📖 Mở PDF trong tab mới
                     </a>
                 </div>
-                <iframe src="${googlePdfUrl}" style="width: 100%; height: 100%; border: none;"></iframe>
+                <iframe src="${cleanUrl}" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>`;
     } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
-        // Tệp Office mở bằng Google Docs Viewer
+        // Tệp Office mở qua Google Docs Viewer
         const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(cleanUrl)}&embedded=true`;
         body.innerHTML = `<iframe src="${googleDocsUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
     } else {

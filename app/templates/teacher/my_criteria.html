@@ -200,8 +200,17 @@ function previewFile(filePath, code, fileName) {
 
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
         body.innerHTML = `<img src="${cleanUrl}" class="img-fluid rounded shadow" style="max-height: 100%; object-fit: contain;">`;
-    } else if (ext === 'pdf') {
-        body.innerHTML = `<iframe src="${cleanUrl}" style="width: 100%; height: 100%; border: none;"></iframe>`;
+    } else if (ext === 'pdf' || cleanUrl.endsWith('.pdf')) {
+        const googlePdfUrl = `https://docs.google.com/gview?url=${encodeURIComponent(cleanUrl)}&embedded=true`;
+        body.innerHTML = `
+            <div class="w-100 h-100 d-flex flex-column">
+                <div class="p-2 bg-light text-end border-bottom">
+                    <a href="${cleanUrl}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                        📖 Mở PDF trong tab mới
+                    </a>
+                </div>
+                <iframe src="${googlePdfUrl}" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>`;
     } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
         // Tệp Office mở bằng Google Docs Viewer
         const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(cleanUrl)}&embedded=true`;

@@ -304,11 +304,14 @@ def submit_evidence():
         if file and file.filename != "":
             filename = secure_filename(file.filename)
             try:
-                # Tải thẳng file lên Cloudinary
+                # Cấu hình upload lên Cloudinary cho phép hiển thị trực tiếp PDF/ảnh
                 upload_result = cloudinary.uploader.upload(
                     file,
                     resource_type="auto",
-                    folder="minh_chung_dgnls"
+                    folder="minh_chung_dgnls",
+                    use_filename=True,
+                    unique_filename=True,
+                    flags="attachment:false"
                 )
                 # Lấy đường link HTTPS lưu vĩnh viễn trên mây
                 file_path = upload_result.get("secure_url")

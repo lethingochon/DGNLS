@@ -7,6 +7,10 @@ from flask import render_template, request, redirect, url_for, session, flash, s
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 
+# Khai báo các mô hình CSDL và kết nối app, db
+from app import app, db
+from app.models import Teacher, Department, Subject, Role, Criteria, TeacherCriteria
+
 # Múi giờ Việt Nam (UTC+7)
 VN_TZ = timezone(timedelta(hours=7))
 

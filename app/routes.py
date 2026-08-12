@@ -597,50 +597,81 @@ def assign_role():
 
     return redirect(url_for("manage_teachers"))
 
-@app.route("/admin/add-teacher", methods=["POST"])
+@app.route("/admin/add-teacher", methods=["GET", "POST"])
 def add_teacher():
-    magv = request.form.get("magv", "").strip()
-    full_name = request.form.get("full_name", "").strip()
-    email = request.form.get("email", "").strip()
-    dept_id = request.form.get("department_id")
-    role_code = request.form.get("role_code", "GV")
-    subject_id = request.form.get("subject_id")
+    if request.method == "POST":
+        magv = request.form.get("magv", "").strip()
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        dept_id = request.form.get("department_id")
+        role_code = request.form.get("role_code", "GV")
+        subject_id = request.form.get("subject_id")
 
-    if not magv or not full_name:
-        flash("Vui lòng nhập đầy đủ Mã GV và Họ tên!", "warning")
+        # 1. Kiểm tra thông tin bắt buộc
+        if not magv or not full_name:
+            flash("Vui lòng nhập đầy đủ Mã GV và Họ tên!", "warning")
+            return redirect(url_for("manage_teachers"))
+
+        # 2. Kiểm tra trùng Mã Giáo viên
+        if Teacher.query.filter_by(magv=magv).first():
+            flash("Mã Giáo viên này đã tồn tại trong hệ thống!", "danger")
+            return redirect(url_for("manage_teachers"))
+
+        # 3. Tạo & kiểm tra trùng Email
+        final_email = email if email else f"{magv.lower()}@thpt.edu.vn"
+        if Teacher.query.filter_by(email=final_email).first():
+            flash(f"Email '{final_email}' đã được sử dụng bởi giáo viên khác!", "danger")
+            return redirect(url_for("manage_teachers"))
+
+        try:
+            # 4. Ép kiểu an toàn cho ID (Chống lỗi chuỗi rỗng '' trên PostgreSQL)
+            department_id = int(dept_id) if (dept_id and str(dept_id).isdigit()) else None
+            
+            sub_id = int(subject_id) if (subject_id and str(subject_id).isdigit()) else None
+            if not sub_id:
+                first_subject = Subject.query.first()
+                sub_id = first_subject.id if first_subject else None
+
+            role = Role.query.filter_by(code=role_code).first()
+            role_id = role.id if role else 5  # Mặc định là vai trò GV (ID = 5)
+
+            # 5. Khởi tạo & Lưu Giáo viên mới
+            new_teacher = Teacher(
+                magv=magv,
+                full_name=full_name,
+                email=final_email,
+                password_hash=generate_password_hash("123456"),
+                department_id=department_id,
+                subject_id=sub_id,
+                role_id=role_id
+            )
+            db.session.add(new_teacher)
+            db.session.commit()
+
+            # 6. Tự động gán toàn bộ Tiêu chí kiểm định siêu tốc (Bulk Insert)
+            all_criterias = Criteria.query.all()
+            new_tc_list = [
+                TeacherCriteria(teacher_id=new_teacher.id, criteria_id=c.id, status="CHUA_NOP")
+                for c in all_criterias
+            ]
+            if new_tc_list:
+                db.session.bulk_save_objects(new_tc_list)
+                db.session.commit()
+
+            flash(f"Thêm thành công giáo viên {full_name} ({magv})! Mật khẩu mặc định: 123456", "success")
+
+        except Exception as e:
+            db.session.rollback()
+            print(f">>> LỖI THÊM GV: {e}", flush=True)
+            flash(f"Đã xảy ra lỗi hệ thống khi lưu CSDL: {e}", "danger")
+
         return redirect(url_for("manage_teachers"))
 
-    if Teacher.query.filter_by(magv=magv).first():
-        flash("Mã Giáo viên này đã tồn tại trong hệ thống!", "danger")
-        return redirect(url_for("manage_teachers"))
-
-    role = Role.query.filter_by(code=role_code).first()
-    
-    if not subject_id:
-        from app.models import Subject
-        first_subject = Subject.query.first()
-        if first_subject:
-            subject_id = first_subject.id
-
-    new_teacher = Teacher(
-        magv=magv,
-        full_name=full_name,
-        email=email if email else f"{magv.lower()}@thpt.edu.vn",
-        password_hash=generate_password_hash("123456"),
-        department_id=dept_id if dept_id else None,
-        role_id=role.id if role else None,
-        subject_id=subject_id
-    )
-    db.session.add(new_teacher)
-    db.session.commit()
-
-    criterias = Criteria.query.all()
-    for c in criterias:
-        db.session.add(TeacherCriteria(teacher_id=new_teacher.id, criteria_id=c.id, status="CHUA_NOP"))
-    db.session.commit()
-
-    flash(f"Đã thêm thành công Giáo viên: {full_name} (Mật khẩu mặc định: 123456)", "success")
-    return redirect(url_for("manage_teachers"))
+    # Xử lý phương thức GET: Lấy danh sách để nạp vào các ô chọn (Dropdown/Select)
+    departments = Department.query.all()
+    subjects = Subject.query.all()
+    roles = Role.query.all()
+    return render_template("admin/add_teacher.html", departments=departments, subjects=subjects, roles=roles)
 
 @app.route("/admin/delete-teacher/<int:teacher_id>", methods=["POST"])
 def delete_teacher(teacher_id):

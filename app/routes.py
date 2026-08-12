@@ -204,7 +204,63 @@ def admin_review_heads():
         })
 
     return render_template("admin/review_heads.html", review_list=review_list)
+# Đoạn code xử lý lấy danh sách Tổ kèm chi tiết tiến độ từng Giáo viên
+departments = Department.query.all()
+dept_stats = []
 
+for dept in departments:
+    teachers = Teacher.query.filter_by(department_id=dept.id).all()
+    teacher_list = []
+    
+    dept_total_approved = 0
+    dept_total_pending = 0
+    total_dept_criterias = 0
+    total_dept_completed = 0
+
+    for t in teachers:
+        # Lấy tất cả tiêu chí của giáo viên này
+        t_criterias = TeacherCriteria.query.filter_by(teacher_id=t.id).all()
+        t_total_tc = len(t_criterias) if t_criterias else 1 # Tránh chia cho 0
+        
+        # Đếm số tiêu chí đã đạt (DA_XAC_NHAN) và đang thẩm định (DA_NOP)
+        t_approved = sum(1 for tc in t_criterias if tc.status == 'DA_XAC_NHAN')
+        t_pending = sum(1 for tc in t_criterias if tc.status == 'DA_NOP')
+        
+        # % Hoàn thành của riêng giáo viên này
+        t_percent = round((t_approved / t_total_tc) * 100, 1) if t_total_tc > 0 else 0.0
+
+        dept_total_approved += t_approved
+        dept_total_pending += t_pending
+        total_dept_criterias += t_total_tc
+        total_dept_completed += t_approved
+
+        teacher_list.append({
+            'id': t.id,
+            'magv': t.magv,
+            'full_name': t.full_name,
+            'approved_count': t_approved,
+            'pending_count': t_pending,
+            'total_tc': t_total_tc,
+            'percent': t_percent
+        })
+
+    # % Hoàn thành chung của cả Tổ
+    dept_percent = round((total_dept_completed / total_dept_criterias) * 100, 1) if total_dept_criterias > 0 else 0.0
+
+    # Tìm tổ trưởng
+    leader = Teacher.query.filter_by(department_id=dept.id, role_id=3).first() # Role 3: TT
+    leader_name = leader.full_name if leader else "Chưa phân công"
+
+    dept_stats.append({
+        'id': dept.id,
+        'name': dept.name,
+        'teacher_count': len(teachers),
+        'leader_name': leader_name,
+        'approved_count': dept_total_approved,
+        'pending_count': dept_total_pending,
+        'percent': dept_percent,
+        'teachers': teacher_list
+    })
 @app.route("/admin/export-excel")
 def export_excel():
     try:

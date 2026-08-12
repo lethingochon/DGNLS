@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Thêm Giáo Viên Mới{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 650px;">
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h4 class="fw-bold mb-4 text-primary">➕ Thêm Giáo Viên Mới</h4>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="/admin/add-teacher" method="POST">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Mã Giáo Viên (*)</label>
+                <input type="text" name="magv" class="form-control" placeholder="Ví dụ: GV099" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Họ và Tên (*)</label>
+                <input type="text" name="full_name" class="form-control" placeholder="Nguyễn Văn A" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Email</label>
+                <input type="email" name="email" class="form-control" placeholder="Để trống sẽ tự tạo theo Mã GV">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Tổ Chuyên Môn (*)</label>
+                <select name="department_id" class="form-select" required>
+                    <option value="">-- Chọn Tổ Chuyên Môn --</option>
+                    {% for d in departments %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Môn Giảng Dạy</label>
+                <select name="subject_id" class="form-select">
+                    <option value="">-- Chọn Môn Học --</option>
+                    {% for s in subjects %}
+                        <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Chức Vụ / Vai Trò</label>
+                <select name="role_id" class="form-select">
+                    {% for r in roles %}
+                        <option value="{{ r.id }}" {% if r.code == 'GV' %}selected{% endif %}>{{ r.name }} ({{ r.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <a href="/admin/dashboard" class="btn btn-light border px-4">Quay lại</a>
+                <button type="submit" class="btn btn-primary fw-bold px-4">Lưu Giáo Viên</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

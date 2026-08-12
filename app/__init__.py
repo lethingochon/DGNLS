@@ -16,8 +16,9 @@ from app import models
 
 # 🛠️ NẠP TỐI ƯU SIÊU NHANH & TỰ ĐỘNG ĐỒNG BỘ SEQUENCE CHO POSTGRESQL/SQLITE
 with app.app_context():
-    db.create_all()
     try:
+        db.create_all()
+
         Teacher = models.Teacher
         Criteria = models.Criteria
         Field = models.Field
@@ -194,7 +195,8 @@ with app.app_context():
         db.session.rollback()
         print(f">>> LỖI NẠP DỮ LIỆU: {e}", flush=True)
 
-from app import routes
+    # NẠP DỮ LIỆU ROUTES SAU KHI ĐÃ CÓ CONTEXT
+    from app import routes
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

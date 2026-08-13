@@ -115,7 +115,7 @@
         </button>
     </div>
 
-    <!-- 4. Section: Tiến Độ Thẩm Định Theo Tổ Chuyên Môn (ACCORDION CHÍNH THỨC) -->
+    <!-- 4. Section: Tiến Độ Thẩm Định Theo Tổ Chuyên Môn -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-bold mb-0" style="color: #0f172a;">Tiến Độ Thẩm Định Theo Tổ Chuyên Môn</h4>
         <small class="text-muted">💡 <i>Bấm vào từng Tổ để xem tỷ lệ hoàn thành của từng Giáo viên</i></small>
@@ -195,7 +195,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for t in item.teachers %}
+                                <!-- DÙNG ĐOẠN ĐỘNG NÀY ĐỂ TỰ ĐỘNG TÌM BIẾN TRUYỀN TỪ PYTHON -->
+                                {% set list_gv = item.teachers or item.teacher_list %}
+                                {% for t in list_gv %}
                                 <tr>
                                     <td class="text-center text-muted">{{ loop.index }}</td>
                                     <td><span class="badge bg-secondary font-monospace">{{ t.magv }}</span></td>

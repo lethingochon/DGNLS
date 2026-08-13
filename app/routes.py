@@ -384,9 +384,15 @@ def submit_evidence():
         if file and file.filename != "":
             original_filename = file.filename
             filename = secure_filename(original_filename)
-            file_ext = os.path.splitext(original_filename)[1].lower()
 
-            # Phân loại: Word, Excel, ZIP bắt buộc dùng 'raw'; Ảnh và PDF dùng 'auto'
+            # Tách tên và đuôi file (ví dụ: name_only='ke_hoach', file_ext='.xlsx')
+            name_only, file_ext = os.path.splitext(filename)
+            file_ext = file_ext.lower()
+
+            # Ép tên lưu trữ trên Cloudinary phải giữ lại đuôi file
+            unique_suffix = uuid.uuid4().hex[:6]
+            custom_public_id = f"{name_only}_{unique_suffix}{file_ext}"
+
             raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.zip', '.rar', '.txt']
             res_type = "raw" if file_ext in raw_extensions else "auto"
 
@@ -395,8 +401,7 @@ def submit_evidence():
                     file,
                     resource_type=res_type,
                     folder="minh_chung_dgnls",
-                    use_filename=True,
-                    unique_filename=True
+                    public_id=custom_public_id  # <-- GIỮ ĐUÔI ĐỊNH DẠNG TỆP TIN
                 )
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"
@@ -417,7 +422,7 @@ def submit_evidence():
                 url=final_url
             )
             db.session.add(ev)
-            db.session.flush()  # Lấy ev.id tự động sinh ra
+            db.session.flush()
 
             # Tạo liên kết ở bảng trung gian
             tc_ev = TeacherCriteriaEvidence(

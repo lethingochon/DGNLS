@@ -79,31 +79,40 @@
                                     </div>
                                 {% endif %}
                             </td>
-                            <td>
-                                {% if item.evidences %}
-                                    <div class="d-flex flex-column gap-1">
-                                        {% for ev in item.evidences %}
-                                            <div class="d-flex align-items-center gap-1">
-                                                {% if ev.file_path %}
-                                                    <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2" onclick="previewFile('{{ ev.file_path }}', '{{ item.criteria_code }}', '{{ ev.title }}')">
-                                                        👁️ File {{ loop.index }}
-                                                    </button>
-                                                {% elif ev.url %}
-                                                    <a href="{{ ev.url }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2">
-                                                        🔗 Link {{ loop.index }}
-                                                    </a>
-                                                {% endif %}
-                                                
-                                                <form action="/teacher/delete-evidence/{{ item.id }}/{{ ev.id }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có muốn xóa minh chứng này?');">
-                                                    <button type="submit" class="btn btn-sm text-danger p-0 border-0 ms-1" title="Xóa minh chứng này">🗑️</button>
-                                                </form>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted small">Chưa có</span>
-                                {% endif %}
-                            </td>
+                           <td>
+    {% if item.evidences %}
+        <div class="d-flex flex-column gap-1">
+            {% for ev in item.evidences %}
+                <!-- Tự động lấy link từ file_path hoặc url -->
+                {% set link = ev.file_path or ev.url %}
+                
+                {% if link %}
+                    <div class="d-flex align-items-center gap-1">
+                        <!-- Nếu là tệp tin Cloudinary hoặc FILE -> Mở Mắt Thần xem preview -->
+                        {% if ev.storage_type == 'FILE' or 'cloudinary.com' in link %}
+                            <button class="btn btn-sm btn-outline-info rounded-pill py-0 px-2" 
+                                    onclick="previewFile('{{ link }}', '{{ item.criteria_code }}', '{{ ev.title or 'Minh chứng' }}')">
+                                👁️ File {{ loop.index }}
+                            </button>
+                        <!-- Nếu là đường dẫn ngoài (Drive/Canva) -> Mở tab mới -->
+                        {% else %}
+                            <a href="{{ link }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2">
+                                🔗 Link {{ loop.index }}
+                            </a>
+                        {% endif %}
+                        
+                        <!-- Nút Xóa Minh Chứng -->
+                        <form action="/teacher/delete-evidence/{{ item.id }}/{{ ev.id }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có muốn xóa minh chứng này?');">
+                            <button type="submit" class="btn btn-sm text-danger p-0 border-0 ms-1" title="Xóa minh chứng này">🗑️</button>
+                        </form>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <span class="text-muted small">Chưa có</span>
+    {% endif %}
+</td>
                             <td class="text-end pe-3">
                                 {% if item.status == 'TU_CHOI' %}
                                     <button class="btn btn-sm btn-danger fw-bold px-3 rounded-2 shadow-sm" onclick="openUploadModal({{ item.id }}, '{{ item.criteria_code }} - {{ item.criteria_name }}')">

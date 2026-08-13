@@ -77,13 +77,13 @@
             </div>
         </div>
 
-        <!-- Card 3: Minh chứng đã thẩm định -->
+        <!-- Card 3: Tiêu chí đã thẩm định -->
         <div class="col-md-3">
             <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; background: #ffffff;">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <small class="text-uppercase fw-bold text-muted" style="font-size: 11px; letter-spacing: 0.5px;">MINH CHỨNG ĐÃ THẨM ĐỊNH</small>
-                        <h3 class="fw-bold my-1" style="font-size: 26px; color: #0f172a;">{{ total_approved }} <span class="fs-6 text-muted fw-normal">tệp</span></h3>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 11px; letter-spacing: 0.5px;">TIÊU CHÍ ĐÃ ĐẠT CHUẨN</small>
+                        <h3 class="fw-bold my-1" style="font-size: 26px; color: #0f172a;">{{ total_approved }} <span class="fs-6 text-muted fw-normal">tiêu chí</span></h3>
                     </div>
                     <div class="rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 20px; background-color: #f3e8ff;">
                         🏅
@@ -118,7 +118,7 @@
     <!-- 4. Section: Tiến Độ Thẩm Định Theo Tổ Chuyên Môn -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-bold mb-0" style="color: #0f172a;">Tiến Độ Thẩm Định Theo Tổ Chuyên Môn</h4>
-        <small class="text-muted">💡 <i>Bấm vào từng Tổ để xem tỷ lệ hoàn thành của từng Giáo viên</i></small>
+        <small class="text-muted">💡 <i>Bấm vào từng Tổ để xem chi tiết từng Giáo viên</i></small>
     </div>
 
     <div class="accordion d-flex flex-column gap-3 mb-5" id="accordionDeptList">
@@ -132,7 +132,7 @@
                 <div class="row align-items-center">
                     
                     <!-- Cột 1: Tên Tổ & Tổ trưởng -->
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <h5 class="fw-bold mb-0" style="font-size: 17px; color: #0b192c;">{{ item.name }}</h5>
                             <span class="badge bg-primary text-white fw-bold px-2 py-1" style="font-size: 11px;">
@@ -144,23 +144,21 @@
                         </small>
                     </div>
 
-                    <!-- Cột 2: Đã đạt chuẩn -->
-                    <div class="col-md-2 text-md-center my-2 my-md-0">
-                        <small class="text-muted d-block" style="font-size: 12px;">ĐÃ ĐẠT CHUẨN</small>
-                        <span class="fw-bold text-success" style="font-size: 16px;">{{ item.dept_approved if item.dept_approved is defined else item.approved }} tệp</span>
+                    <!-- Cột 2: Đã đạt chuẩn (Thống kê số tiêu chí) -->
+                    <div class="col-md-3 text-md-center my-2 my-md-0">
+                        <small class="text-muted d-block fw-bold" style="font-size: 11px;">SỐ TIÊU CHÍ ĐẠT CHUẨN</small>
+                        {% set dept_appr = item.dept_approved if item.dept_approved is defined else item.approved %}
+                        {% set dept_tot = item.total_crit if item.total_crit is defined else item.total %}
+                        <span class="fw-bold text-success" style="font-size: 16px;">
+                            {{ dept_appr }}{% if dept_tot %}/{{ dept_tot }}{% endif %} tiêu chí
+                        </span>
                     </div>
 
-                    <!-- Cột 3: Đang thẩm định -->
-                    <div class="col-md-2 text-md-center my-2 my-md-0">
-                        <small class="text-muted d-block" style="font-size: 12px;">ĐANG THẨM ĐỊNH</small>
-                        <span class="fw-bold text-warning" style="font-size: 16px;">{{ item.dept_pending if item.dept_pending is defined else item.pending }} tệp</span>
-                    </div>
-
-                    <!-- Cột 4: Tỷ lệ % & Thanh Tiến độ ngang -->
+                    <!-- Cột 3: Tỷ lệ % & Thanh Tiến độ ngang -->
                     <div class="col-md-4">
                         {% set dept_percent_val = item.dept_percent if item.dept_percent is defined else item.progress %}
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted fw-bold" style="font-size: 12px;">TỶ LỆ HOÀN THÀNH TỔ</small>
+                            <small class="text-muted fw-bold" style="font-size: 11px;">TỶ LỆ HOÀN THÀNH TỔ</small>
                             <span class="fw-bold text-success" style="font-size: 16px;">{{ dept_percent_val }}%</span>
                         </div>
                         <div class="progress" style="height: 10px; border-radius: 10px; background-color: #e2e8f0;">
@@ -168,7 +166,7 @@
                         </div>
                     </div>
 
-                    <!-- Cột 5: Biểu tượng mũi tên chỉ xuống -->
+                    <!-- Cột 4: Biểu tượng mũi tên chỉ xuống -->
                     <div class="col-md-1 text-end d-none d-md-block">
                         <span class="badge bg-light text-dark border p-2 rounded-circle">▼</span>
                     </div>
@@ -176,7 +174,7 @@
                 </div>
             </div>
 
-            <!-- DANH SÁCH CHI TIẾT TỪNG GIÁO VIÊN (NỘI DUNG MỞ RỘNG KHI BẤM VÀO TỔ) -->
+            <!-- DANH SÁCH CHI TIẾT TỪNG GIÁO VIÊN (ĐÃ BỎ CỘT ĐANG THẨM ĐỊNH & THAY BẰNG TIÊU CHÍ) -->
             <div id="collapseDept{{ item.id }}" class="collapse" aria-labelledby="headingDept{{ item.id }}" data-bs-parent="#accordionDeptList">
                 <div class="card-body bg-light border-top p-3">
                     <h6 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
@@ -189,26 +187,28 @@
                                     <th style="width: 50px;" class="text-center">STT</th>
                                     <th style="width: 120px;">Mã GV</th>
                                     <th>Họ và Tên Giáo viên</th>
-                                    <th style="width: 140px;" class="text-center">Đã đạt chuẩn</th>
-                                    <th style="width: 140px;" class="text-center">Đang thẩm định</th>
+                                    <th style="width: 180px;" class="text-center">Số tiêu chí đạt chuẩn</th>
                                     <th style="width: 250px;">Tỷ lệ hoàn thành</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- DÙNG ĐOẠN ĐỘNG NÀY ĐỂ TỰ ĐỘNG TÌM BIẾN TRUYỀN TỪ PYTHON -->
                                 {% set list_gv = item.teachers or item.teacher_list %}
                                 {% for t in list_gv %}
                                 <tr>
                                     <td class="text-center text-muted">{{ loop.index }}</td>
                                     <td><span class="badge bg-secondary font-monospace">{{ t.magv }}</span></td>
                                     <td class="fw-bold text-dark">{{ t.full_name }}</td>
-                                    <td class="text-center text-success fw-bold">{{ t.approved }} tệp</td>
-                                    <td class="text-center text-warning fw-bold">{{ t.pending }} tệp</td>
+                                    
+                                    <!-- HIỂN THỊ SỐ TIÊU CHÍ ĐẠT / TỔNG SỐ TIÊU CHÍ -->
+                                    {% set t_total_val = t.total_tc if t.total_tc is defined else (t.total if t.total is defined else 0) %}
+                                    <td class="text-center text-success fw-bold">
+                                        {{ t.approved }}{% if t_total_val %}/{{ t_total_val }}{% endif %} tiêu chí
+                                    </td>
+                                    
                                     <td>
                                         {% set teacher_percent_val = t.percent if t.percent is defined else t.progress %}
                                         <div class="d-flex justify-content-between align-items-center mb-1">
                                             <span class="fw-bold text-success" style="font-size: 13px;">{{ teacher_percent_val }}%</span>
-                                            <small class="text-muted" style="font-size: 11px;">({{ t.approved }}/{{ t.total_tc if t.total_tc is defined else t.total }} tiêu chí)</small>
                                         </div>
                                         <div class="progress" style="height: 7px; border-radius: 10px; background-color: #e2e8f0;">
                                             <div class="progress-bar bg-info" role="progressbar" style="width: {{ teacher_percent_val }}%;"></div>
@@ -217,7 +217,7 @@
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-3">Chưa có giáo viên thuộc tổ này.</td>
+                                    <td colspan="5" class="text-center text-muted py-3">Chưa có giáo viên thuộc tổ này.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

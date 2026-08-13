@@ -383,17 +383,22 @@ def submit_evidence():
         # 1. Xử lý Upload file lên Cloudinary
         if file and file.filename != "":
             original_filename = file.filename
-            filename = secure_filename(original_filename)
-
-            # Tách tên và đuôi file (ví dụ: name_only='ke_hoach', file_ext='.xlsx')
-            name_only, file_ext = os.path.splitext(filename)
+            
+            # Tách tên và đuôi file từ tên gốc
+            raw_name, file_ext = os.path.splitext(original_filename)
             file_ext = file_ext.lower()
 
-            # Ép tên lưu trữ trên Cloudinary phải giữ lại đuôi file
-            unique_suffix = uuid.uuid4().hex[:6]
-            custom_public_id = f"{name_only}_{unique_suffix}{file_ext}"
+            # Chuẩn hóa tên file sạch ký tự đặc biệt & chống rỗng tên
+            clean_name = secure_filename(raw_name)
+            if not clean_name:
+                clean_name = "minh_chung"
 
-            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.zip', '.rar', '.txt']
+            # Đặt public_id duy nhất và BẮT BUỘC chứa đuôi mở rộng
+            unique_suffix = uuid.uuid4().hex[:6]
+            custom_public_id = f"{clean_name}_{unique_suffix}{file_ext}"
+
+            # File Office, ZIP, RAR dùng 'raw'; Ảnh và PDF dùng 'auto'
+            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.zip', '.rar', '.txt']
             res_type = "raw" if file_ext in raw_extensions else "auto"
 
             try:
@@ -401,10 +406,11 @@ def submit_evidence():
                     file,
                     resource_type=res_type,
                     folder="minh_chung_dgnls",
-                    public_id=custom_public_id  # <-- GIỮ ĐUÔI ĐỊNH DẠNG TỆP TIN
+                    public_id=custom_public_id  # Ép Cloudinary giữ đúng tên và đuôi tệp
                 )
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"
+                filename = original_filename  # Lưu tên gốc có tiếng Việt để hiển thị
             except Exception as e:
                 print("LỖI UPLOAD CLOUDINARY:", e)
                 flash(f"Lỗi kho lưu trữ: {e}", "danger")

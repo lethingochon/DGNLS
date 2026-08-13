@@ -385,6 +385,7 @@ def submit_evidence():
                     file,
                     resource_type="auto",
                     folder="minh_chung_dgnls",
+                    public_id=filename,  # Giữ nguyên tên file và đuôi mở rộng (.xlsx, .pdf...)
                     use_filename=True,
                     unique_filename=True,
                     flags="attachment:false"
@@ -410,7 +411,7 @@ def submit_evidence():
                 title=evidence_title,
                 storage_type=storage_type,
                 file_path=file_path,
-                url=final_url  # Đã sửa: gán link file vào ô url để giao diện hiển thị
+                url=final_url
             )
             db.session.add(ev)
             db.session.commit()
@@ -430,7 +431,6 @@ def submit_evidence():
             tc.feedback = None
             db.session.commit()
 
-    return redirect(url_for("my_criteria"))
     return redirect(url_for("my_criteria"))
 
 @app.route("/teacher/delete-evidence/<int:tc_id>/<int:evidence_id>", methods=["POST"])

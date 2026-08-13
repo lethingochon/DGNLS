@@ -348,13 +348,15 @@ def my_criteria():
             "evidences": ev_list
         })
 
+    # Tự động sắp xếp thứ tự danh sách theo mã tiêu chí (TC101, TC102, TC201...) tăng dần
+    criteria_list.sort(key=lambda x: x["criteria_code"])
+
     return render_template(
         "teacher/my_criteria.html",
         criteria_list=criteria_list,
         completed_count=completed_count,
         total_count=len(records)
     )
-
 @app.route("/teacher/submit-evidence", methods=["POST"])
 def submit_evidence():
     tc_id = request.form.get("criteria_id")

@@ -139,21 +139,44 @@ def admin_dashboard():
 
             dept_progress = round((dept_approved / dept_total_crit) * 100, 1) if dept_total_crit > 0 else 0
 
-        # Trong vòng lặp for dept in departments:
-        # (Cô nhớ đảm bảo trước đó đã gom danh sách thông tin GV vào biến teacher_list nhé)
-        
-        dept_stats.append({
-            "id": dept.id,
-            "name": dept.name,
-            "teacher_count": len(dept_teachers),
-            "leader": leader_name,
-            "total_crit": dept_total_crit,
-            "reviewed": dept_reviewed,
-            "pending": dept_pending,
-            "approved": dept_approved,
-            "progress": dept_progress,
-            "teachers": teacher_list  # <-- BỔ SUNG DÒNG NÀY ĐỂ TRUYỀN DANH SÁCH GV SANG HTML
-        })
+            # 1. GOM DANH SÁCH CHI TIẾT TỪNG GIÁO VIÊN TRONG TỔ
+            teacher_list = []
+            for t in dept_teachers:
+                t_criterias = TeacherCriteria.query.filter_by(teacher_id=t.id).all()
+                t_total = len(t_criterias)
+                t_appr = sum(1 for tc in t_criterias if tc.status == "DA_XAC_NHAN")
+                t_pend = sum(1 for tc in t_criterias if tc.status == "DA_NOP")
+                t_prog = round((t_appr / t_total) * 100, 1) if t_total > 0 else 0.0
+
+                teacher_list.append({
+                    "id": t.id,
+                    "magv": t.magv,
+                    "full_name": t.full_name,
+                    "approved": t_appr,
+                    "pending": t_pend,
+                    "total": t_total,
+                    "total_tc": t_total,
+                    "progress": t_prog,
+                    "percent": t_prog
+                })
+
+            # 2. LƯU VÀO DEPT_STATS KÈM KHÓA TEACHERS
+            dept_stats.append({
+                "id": dept.id,
+                "name": dept.name,
+                "teacher_count": len(dept_teachers),
+                "leader": leader_name,
+                "head_name": leader_name,
+                "total_crit": dept_total_crit,
+                "reviewed": dept_reviewed,
+                "pending": dept_pending,
+                "dept_pending": dept_pending,
+                "approved": dept_approved,
+                "dept_approved": dept_approved,
+                "progress": dept_progress,
+                "dept_percent": dept_progress,
+                "teachers": teacher_list
+            })
 
     except Exception as e:
         print("LỖI DASHBOARD BGH:", e)

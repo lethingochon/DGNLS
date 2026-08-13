@@ -359,7 +359,7 @@ def my_criteria():
 def submit_evidence():
     tc_id = request.form.get("criteria_id")
     file = request.files.get("evidence_file")
-    url = request.form.get("evidence_url")
+    url_input = request.form.get("evidence_url")
 
     tc = TeacherCriteria.query.get(tc_id)
     if tc:
@@ -385,9 +385,12 @@ def submit_evidence():
                 flash("Có lỗi khi nộp file lên kho lưu trữ!", "danger")
                 return redirect(url_for("my_criteria"))
 
-        evidence_title = filename if filename else (url if url else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
+        evidence_title = filename if filename else (url_input if url_input else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
 
-        if file_path or url:
+        # Tự động gán link Cloudinary vào cột url nếu nộp bằng tệp tin
+        final_url = file_path if file_path else url_input
+
+        if file_path or url_input:
             max_ev = Evidence.query.order_by(Evidence.id.desc()).first()
             new_ev_id = (max_ev.id + 1) if max_ev else 1
 
@@ -396,7 +399,7 @@ def submit_evidence():
                 title=evidence_title,
                 storage_type=storage_type,
                 file_path=file_path,
-                url=url
+                url=final_url  # Đã sửa: gán link file vào ô url để giao diện hiển thị
             )
             db.session.add(ev)
             db.session.commit()
@@ -416,6 +419,7 @@ def submit_evidence():
             tc.feedback = None
             db.session.commit()
 
+    return redirect(url_for("my_criteria"))
     return redirect(url_for("my_criteria"))
 
 @app.route("/teacher/delete-evidence/<int:tc_id>/<int:evidence_id>", methods=["POST"])

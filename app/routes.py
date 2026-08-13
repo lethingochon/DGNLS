@@ -320,7 +320,6 @@ def my_criteria():
     if not teacher_id:
         return redirect(url_for("login"))
 
-    # Lấy toàn bộ tiêu chí kèm minh chứng trong 1 truy vấn duy nhất (Joined Load)
     records = (
         TeacherCriteria.query
         .options(
@@ -360,7 +359,6 @@ def my_criteria():
             "evidences": ev_list
         })
 
-    # Sắp xếp thứ tự tiêu chí tăng dần
     criteria_list.sort(key=lambda x: x["criteria_code"])
 
     return render_template(

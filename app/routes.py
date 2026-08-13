@@ -313,12 +313,24 @@ def export_excel():
 # 3. MÀN HÌNH GIÁO VIÊN (NỘP & QUẢN LÝ MINH CHỨNG)
 # ----------------------------------------------------
 @app.route("/teacher/my-criteria")
+from sqlalchemy.orm import joinedload
+
 def my_criteria():
     teacher_id = session.get("teacher_id")
     if not teacher_id:
         return redirect(url_for("login"))
 
-    records = TeacherCriteria.query.filter_by(teacher_id=teacher_id).all()
+    # Lấy toàn bộ tiêu chí kèm minh chứng trong 1 truy vấn duy nhất (Joined Load)
+    records = (
+        TeacherCriteria.query
+        .options(
+            joinedload(TeacherCriteria.evidences)
+            .joinedload(TeacherCriteriaEvidence.evidence)
+        )
+        .filter_by(teacher_id=teacher_id)
+        .all()
+    )
+
     criteria_list = []
     completed_count = 0
 
@@ -326,9 +338,8 @@ def my_criteria():
         if r.status == "DA_XAC_NHAN":
             completed_count += 1
 
-        tc_evidences = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=r.id).all()
         ev_list = []
-        for tc_ev in tc_evidences:
+        for tc_ev in r.evidences:
             if tc_ev.evidence:
                 ev_list.append({
                     "id": tc_ev.evidence.id,
@@ -349,7 +360,7 @@ def my_criteria():
             "evidences": ev_list
         })
 
-    # Tự động sắp xếp thứ tự danh sách theo mã tiêu chí (TC101, TC102, TC201...) tăng dần
+    # Sắp xếp thứ tự tiêu chí tăng dần
     criteria_list.sort(key=lambda x: x["criteria_code"])
 
     return render_template(

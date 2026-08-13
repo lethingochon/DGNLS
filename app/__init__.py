@@ -189,7 +189,7 @@ with app.app_context():
                         pass
                 db.session.commit()
 
-            print(">>> ĐÃ NẠP CSDL SIÊU NHANH VÀ SỬA LỖI ID THÀNH CÔNG!", flush=True)
+           # print(">>> ĐÃ NẠP CSDL SIÊU NHANH VÀ SỬA LỖI ID THÀNH CÔNG!", flush=True)
 
     except Exception as e:
         db.session.rollback()

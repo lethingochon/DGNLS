@@ -344,7 +344,8 @@ def my_criteria():
                     "id": tc_ev.evidence.id,
                     "file_path": tc_ev.evidence.file_path,
                     "url": tc_ev.evidence.url,
-                    "title": tc_ev.evidence.title
+                    "title": tc_ev.evidence.title,
+                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE")  # <-- BỔ SUNG DÒNG NÀY
                 })
 
         criteria_list.append({
@@ -383,26 +384,25 @@ def submit_evidence():
         if file and file.filename != "":
             original_filename = file.filename
             filename = secure_filename(original_filename)
-
-            # Tách lấy đuôi file (ví dụ: .pdf, .xlsx, .docx)
             file_ext = os.path.splitext(original_filename)[1].lower()
-            ext_clean = file_ext.replace('.', '') if file_ext else None
+
+            # Phân loại: Word, Excel, ZIP bắt buộc dùng 'raw'; Ảnh và PDF dùng 'auto'
+            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.zip', '.rar', '.txt']
+            res_type = "raw" if file_ext in raw_extensions else "auto"
 
             try:
                 upload_result = cloudinary.uploader.upload(
                     file,
-                    resource_type="auto",
+                    resource_type=res_type,
                     folder="minh_chung_dgnls",
                     use_filename=True,
-                    unique_filename=True,
-                    flags="attachment:false",
-                    format=ext_clean  # Truyền định dạng đuôi file để Cloudinary lưu đúng đuôi .pdf, .xlsx
+                    unique_filename=True
                 )
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"
             except Exception as e:
                 print("LỖI UPLOAD CLOUDINARY:", e)
-                flash("Có lỗi khi nộp file lên kho lưu trữ!", "danger")
+                flash(f"Lỗi kho lưu trữ: {e}", "danger")
                 return redirect(url_for("my_criteria"))
 
         evidence_title = filename if filename else (url_input if url_input else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
@@ -410,7 +410,6 @@ def submit_evidence():
 
         # 2. Lưu thông tin vào CSDL
         if file_path or url_input:
-            # Tạo bản ghi Evidence
             ev = Evidence(
                 title=evidence_title,
                 storage_type=storage_type,
@@ -420,19 +419,18 @@ def submit_evidence():
             db.session.add(ev)
             db.session.flush()  # Lấy ev.id tự động sinh ra
 
-            # Tạo liên kết ở bảng trung gian TeacherCriteriaEvidence
+            # Tạo liên kết ở bảng trung gian
             tc_ev = TeacherCriteriaEvidence(
                 teacher_criteria_id=tc.id,
                 evidence_id=ev.id
             )
             db.session.add(tc_ev)
             
-            # Cập nhật trạng thái của Tiêu chí
+            # Cập nhật trạng thái tiêu chí
             tc.status = "DA_NOP"
             tc.submitted_at = get_vn_now()
             tc.feedback = None
 
-            # Lưu tất cả thay đổi trong 1 lần commit
             db.session.commit()
             flash("Nộp minh chứng thành công!", "success")
 

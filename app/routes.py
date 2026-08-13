@@ -186,6 +186,10 @@ def admin_review_heads():
     ).all()
 
     review_list = []
+    
+    # =========================================================
+    # ĐOẠN CODE LẤY FILE MINH CHỨNG CỦA TỔ TRƯỞNG TRUYỀN SANG HTML
+    # =========================================================
     for r in records:
         tc_evidences = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=r.id).all()
         ev_list = []
@@ -195,7 +199,8 @@ def admin_review_heads():
                     "id": tc_ev.evidence.id,
                     "file_path": tc_ev.evidence.file_path,
                     "url": tc_ev.evidence.url,
-                    "title": tc_ev.evidence.title
+                    "title": tc_ev.evidence.title,
+                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE") # Bổ sung storage_type
                 })
 
         review_list.append({
@@ -207,50 +212,10 @@ def admin_review_heads():
             "criteria_name": r.criteria.name if r.criteria else "",
             "status": r.status,
             "feedback": r.feedback,
-            "evidences": ev_list
+            "evidences": ev_list  # Gửi danh sách file sang giao diện
         })
 
     return render_template("admin/review_heads.html", review_list=review_list)
-# Đoạn code xử lý lấy danh sách Tổ kèm chi tiết tiến độ từng Giáo viên
-departments = Department.query.all()
-dept_stats = []
-
-for dept in departments:
-    teachers = Teacher.query.filter_by(department_id=dept.id).all()
-    teacher_list = []
-    
-    dept_total_approved = 0
-    dept_total_pending = 0
-    total_dept_criterias = 0
-    total_dept_completed = 0
-
-    for t in teachers:
-        # Lấy tất cả tiêu chí của giáo viên này
-        t_criterias = TeacherCriteria.query.filter_by(teacher_id=t.id).all()
-        t_total_tc = len(t_criterias) if t_criterias else 1 # Tránh chia cho 0
-        
-        # Đếm số tiêu chí đã đạt (DA_XAC_NHAN) và đang thẩm định (DA_NOP)
-        t_approved = sum(1 for tc in t_criterias if tc.status == 'DA_XAC_NHAN')
-        t_pending = sum(1 for tc in t_criterias if tc.status == 'DA_NOP')
-        
-        # % Hoàn thành của riêng giáo viên này
-        t_percent = round((t_approved / t_total_tc) * 100, 1) if t_total_tc > 0 else 0.0
-
-        dept_total_approved += t_approved
-        dept_total_pending += t_pending
-        total_dept_criterias += t_total_tc
-        total_dept_completed += t_approved
-
-        teacher_list.append({
-            'id': t.id,
-            'magv': t.magv,
-            'full_name': t.full_name,
-            'approved_count': t_approved,
-            'pending_count': t_pending,
-            'total_tc': t_total_tc,
-            'percent': t_percent
-        })
-
     # % Hoàn thành chung của cả Tổ
     dept_percent = round((total_dept_completed / total_dept_criterias) * 100, 1) if total_dept_criterias > 0 else 0.0
 

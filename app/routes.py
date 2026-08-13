@@ -2,6 +2,7 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone, timedelta
 import os
 import io
+import uuid
 import pandas as pd
 from sqlalchemy import or_
 from flask import render_template, request, redirect, url_for, session, flash, send_file, send_from_directory
@@ -378,6 +379,7 @@ def submit_evidence():
         storage_type = "URL"
         filename = None
 
+        # 1. Xử lý Upload file lên Cloudinary
         if file and file.filename != "":
             filename = secure_filename(file.filename)
             try:
@@ -385,7 +387,6 @@ def submit_evidence():
                     file,
                     resource_type="auto",
                     folder="minh_chung_dgnls",
-                    public_id=filename,  # Giữ nguyên tên file và đuôi mở rộng (.xlsx, .pdf...)
                     use_filename=True,
                     unique_filename=True,
                     flags="attachment:false"
@@ -398,38 +399,35 @@ def submit_evidence():
                 return redirect(url_for("my_criteria"))
 
         evidence_title = filename if filename else (url_input if url_input else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
-
-        # Tự động gán link Cloudinary vào cột url nếu nộp bằng tệp tin
         final_url = file_path if file_path else url_input
 
+        # 2. Lưu thông tin vào CSDL
         if file_path or url_input:
-            max_ev = Evidence.query.order_by(Evidence.id.desc()).first()
-            new_ev_id = (max_ev.id + 1) if max_ev else 1
-
+            # Tạo bản ghi Evidence (để CSDL tự tăng ID)
             ev = Evidence(
-                id=new_ev_id,
                 title=evidence_title,
                 storage_type=storage_type,
                 file_path=file_path,
                 url=final_url
             )
             db.session.add(ev)
-            db.session.commit()
+            db.session.flush()  # Lấy ev.id vừa tự động sinh ra ra mà chưa cần commit
 
-            max_tcev = TeacherCriteriaEvidence.query.order_by(TeacherCriteriaEvidence.id.desc()).first()
-            new_tcev_id = (max_tcev.id + 1) if max_tcev else 1
-
+            # Tạo liên kết ở bảng trung gian TeacherCriteriaEvidence
             tc_ev = TeacherCriteriaEvidence(
-                id=new_tcev_id,
                 teacher_criteria_id=tc.id,
                 evidence_id=ev.id
             )
             db.session.add(tc_ev)
             
+            # Cập nhật trạng thái của Tiêu chí
             tc.status = "DA_NOP"
             tc.submitted_at = get_vn_now()
             tc.feedback = None
+
+            # Lưu tất cả thay đổi trong 1 lần commit duy nhất
             db.session.commit()
+            flash("Nộp minh chứng thành công!", "success")
 
     return redirect(url_for("my_criteria"))
 

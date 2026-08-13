@@ -1,3 +1,4 @@
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timezone, timedelta
 import os
 import io
@@ -313,8 +314,6 @@ def export_excel():
 # 3. MÀN HÌNH GIÁO VIÊN (NỘP & QUẢN LÝ MINH CHỨNG)
 # ----------------------------------------------------
 @app.route("/teacher/my-criteria")
-from sqlalchemy.orm import joinedload
-
 def my_criteria():
     teacher_id = session.get("teacher_id")
     if not teacher_id:

@@ -115,7 +115,7 @@
         </button>
     </div>
 
-    <!-- 4. Section: Tiến Độ Thẩm Định Theo Tổ Chuyên Môn (XỔ XUỐNG XEM CHI TIẾT GV) -->
+    <!-- 4. Section: Tiến Độ Thẩm Định Theo Tổ Chuyên Môn (ACCORDION CHÍNH THỨC) -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-bold mb-0" style="color: #0f172a;">Tiến Độ Thẩm Định Theo Tổ Chuyên Môn</h4>
         <small class="text-muted">💡 <i>Bấm vào từng Tổ để xem tỷ lệ hoàn thành của từng Giáo viên</i></small>
@@ -140,30 +140,31 @@
                             </span>
                         </div>
                         <small class="text-muted" style="font-size: 13px;">
-                            Tổ trưởng: <b class="text-dark">{{ item.leader }}</b>
+                            Tổ trưởng: <b class="text-dark">{{ item.head_name or item.leader or 'Chưa phân công' }}</b>
                         </small>
                     </div>
 
                     <!-- Cột 2: Đã đạt chuẩn -->
                     <div class="col-md-2 text-md-center my-2 my-md-0">
                         <small class="text-muted d-block" style="font-size: 12px;">ĐÃ ĐẠT CHUẨN</small>
-                        <span class="fw-bold text-success" style="font-size: 16px;">{{ item.approved }} tệp</span>
+                        <span class="fw-bold text-success" style="font-size: 16px;">{{ item.dept_approved if item.dept_approved is defined else item.approved }} tệp</span>
                     </div>
 
                     <!-- Cột 3: Đang thẩm định -->
                     <div class="col-md-2 text-md-center my-2 my-md-0">
                         <small class="text-muted d-block" style="font-size: 12px;">ĐANG THẨM ĐỊNH</small>
-                        <span class="fw-bold text-warning" style="font-size: 16px;">{{ item.pending }} tệp</span>
+                        <span class="fw-bold text-warning" style="font-size: 16px;">{{ item.dept_pending if item.dept_pending is defined else item.pending }} tệp</span>
                     </div>
 
                     <!-- Cột 4: Tỷ lệ % & Thanh Tiến độ ngang -->
                     <div class="col-md-4">
+                        {% set dept_percent_val = item.dept_percent if item.dept_percent is defined else item.progress %}
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <small class="text-muted fw-bold" style="font-size: 12px;">TỶ LỆ HOÀN THÀNH TỔ</small>
-                            <span class="fw-bold text-success" style="font-size: 16px;">{{ item.progress }}%</span>
+                            <span class="fw-bold text-success" style="font-size: 16px;">{{ dept_percent_val }}%</span>
                         </div>
                         <div class="progress" style="height: 10px; border-radius: 10px; background-color: #e2e8f0;">
-                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ item.progress }}%;"></div>
+                            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ dept_percent_val }}%;"></div>
                         </div>
                     </div>
 
@@ -202,12 +203,13 @@
                                     <td class="text-center text-success fw-bold">{{ t.approved }} tệp</td>
                                     <td class="text-center text-warning fw-bold">{{ t.pending }} tệp</td>
                                     <td>
+                                        {% set teacher_percent_val = t.percent if t.percent is defined else t.progress %}
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="fw-bold text-success" style="font-size: 13px;">{{ t.progress }}%</span>
-                                            <small class="text-muted" style="font-size: 11px;">({{ t.approved }}/{{ t.total }} tiêu chí)</small>
+                                            <span class="fw-bold text-success" style="font-size: 13px;">{{ teacher_percent_val }}%</span>
+                                            <small class="text-muted" style="font-size: 11px;">({{ t.approved }}/{{ t.total_tc if t.total_tc is defined else t.total }} tiêu chí)</small>
                                         </div>
                                         <div class="progress" style="height: 7px; border-radius: 10px; background-color: #e2e8f0;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ t.progress }}%;"></div>
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ teacher_percent_val }}%;"></div>
                                         </div>
                                     </td>
                                 </tr>

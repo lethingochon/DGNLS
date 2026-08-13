@@ -139,17 +139,21 @@ def admin_dashboard():
 
             dept_progress = round((dept_approved / dept_total_crit) * 100, 1) if dept_total_crit > 0 else 0
 
-            dept_stats.append({
-                "id": dept.id,
-                "name": dept.name,
-                "teacher_count": len(dept_teachers),
-                "leader": leader_name,
-                "total_crit": dept_total_crit,
-                "reviewed": dept_reviewed,
-                "pending": dept_pending,
-                "approved": dept_approved,
-                "progress": dept_progress
-            })
+        # Trong vòng lặp for dept in departments:
+        # (Cô nhớ đảm bảo trước đó đã gom danh sách thông tin GV vào biến teacher_list nhé)
+        
+        dept_stats.append({
+            "id": dept.id,
+            "name": dept.name,
+            "teacher_count": len(dept_teachers),
+            "leader": leader_name,
+            "total_crit": dept_total_crit,
+            "reviewed": dept_reviewed,
+            "pending": dept_pending,
+            "approved": dept_approved,
+            "progress": dept_progress,
+            "teachers": teacher_list  # <-- BỔ SUNG DÒNG NÀY ĐỂ TRUYỀN DANH SÁCH GV SANG HTML
+        })
 
     except Exception as e:
         print("LỖI DASHBOARD BGH:", e)

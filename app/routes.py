@@ -381,7 +381,13 @@ def submit_evidence():
 
         # 1. Xử lý Upload file lên Cloudinary
         if file and file.filename != "":
-            filename = secure_filename(file.filename)
+            original_filename = file.filename
+            filename = secure_filename(original_filename)
+
+            # Tách lấy đuôi file (ví dụ: .pdf, .xlsx, .docx)
+            file_ext = os.path.splitext(original_filename)[1].lower()
+            ext_clean = file_ext.replace('.', '') if file_ext else None
+
             try:
                 upload_result = cloudinary.uploader.upload(
                     file,
@@ -389,7 +395,8 @@ def submit_evidence():
                     folder="minh_chung_dgnls",
                     use_filename=True,
                     unique_filename=True,
-                    flags="attachment:false"
+                    flags="attachment:false",
+                    format=ext_clean  # Truyền định dạng đuôi file để Cloudinary lưu đúng đuôi .pdf, .xlsx
                 )
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"
@@ -403,7 +410,7 @@ def submit_evidence():
 
         # 2. Lưu thông tin vào CSDL
         if file_path or url_input:
-            # Tạo bản ghi Evidence (để CSDL tự tăng ID)
+            # Tạo bản ghi Evidence
             ev = Evidence(
                 title=evidence_title,
                 storage_type=storage_type,
@@ -411,7 +418,7 @@ def submit_evidence():
                 url=final_url
             )
             db.session.add(ev)
-            db.session.flush()  # Lấy ev.id vừa tự động sinh ra ra mà chưa cần commit
+            db.session.flush()  # Lấy ev.id tự động sinh ra
 
             # Tạo liên kết ở bảng trung gian TeacherCriteriaEvidence
             tc_ev = TeacherCriteriaEvidence(
@@ -425,12 +432,11 @@ def submit_evidence():
             tc.submitted_at = get_vn_now()
             tc.feedback = None
 
-            # Lưu tất cả thay đổi trong 1 lần commit duy nhất
+            # Lưu tất cả thay đổi trong 1 lần commit
             db.session.commit()
             flash("Nộp minh chứng thành công!", "success")
 
     return redirect(url_for("my_criteria"))
-
 @app.route("/teacher/delete-evidence/<int:tc_id>/<int:evidence_id>", methods=["POST"])
 def delete_evidence(tc_id, evidence_id):
     teacher_id = session.get("teacher_id")

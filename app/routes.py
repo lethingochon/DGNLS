@@ -15,7 +15,8 @@ from app.models import Teacher, Department, Subject, Role, Criteria, TeacherCrit
 VN_TZ = timezone(timedelta(hours=7))
 
 def get_vn_now():
-    return datetime.now(VN_TZ)
+    # Lấy giờ VN và bỏ thông tin tzinfo để PostgreSQL lưu chính xác con số giờ Việt Nam
+    return datetime.now(VN_TZ).replace(tzinfo=None)
 
 # Thư viện Cloudinary
 import cloudinary

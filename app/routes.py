@@ -11,20 +11,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 # Khai báo các mô hình CSDL và kết nối app, db
 from app import app, db
-from app.models import Teacher, Department, Subject, Role, Criteria, TeacherCriteria
-
-# Múi giờ Việt Nam (UTC+7)
-VN_TZ = timezone(timedelta(hours=7))
-
-def get_vn_now():
-    # Lấy giờ VN và bỏ thông tin tzinfo để PostgreSQL lưu chính xác con số giờ Việt Nam
-    return datetime.now(VN_TZ).replace(tzinfo=None)
-
-# Thư viện Cloudinary
-import cloudinary
-import cloudinary.uploader
-
-from app import app, db
 from app.models import (
     Teacher, 
     TeacherCriteria, 
@@ -33,8 +19,21 @@ from app.models import (
     Evidence, 
     TeacherCriteriaEvidence, 
     Department, 
-    Role
+    Role,
+    Subject
 )
+
+# Thư viện Cloudinary
+import cloudinary
+import cloudinary.uploader
+
+# Múi giờ Việt Nam (UTC+7)
+VN_TZ = timezone(timedelta(hours=7))
+
+def get_vn_now():
+    # Lấy giờ VN và bỏ tzinfo để lưu chính xác vào CSDL
+    return datetime.now(VN_TZ).replace(tzinfo=None)
+
 
 # ----------------------------------------------------
 # 1. TRANG ĐĂNG NHẬP & ĐĂNG XUẤT
@@ -84,7 +83,7 @@ def logout():
 
 
 # ----------------------------------------------------
-# 2. DASHBOARD BGH, XUẤT EXCEL & THẨM ĐỊNH TỔ TRƯỜNG
+# 2. DASHBOARD BGH, XUẤT EXCEL & THẨM ĐỊNH TỔ TRƯỞNG
 # ----------------------------------------------------
 @app.route("/admin/dashboard")
 def admin_dashboard():
@@ -117,29 +116,29 @@ def admin_dashboard():
             dept_teachers = [t for t in official_teachers if t.department_id == dept.id]
             dept_teacher_ids = [t.id for t in dept_teachers]
             
-            leader = Teacher.query.filter_by(department_id=dept.id).join(Role).filter(Role.code == "TT").first()
+            leader = Teacher.query.filter_by(department_id=dept.id).join(Role).filter(Role.code.in_(["TT", "TP"])).first()
             leader_name = leader.full_name if leader else "Chưa phân công"
 
             if dept_teacher_ids:
                 dept_total_crit = TeacherCriteria.query.filter(TeacherCriteria.teacher_id.in_(dept_teacher_ids)).count()
-                dept_reviewed = TeacherCriteria.query.filter(
+                dept_approved = TeacherCriteria.query.filter(
                     TeacherCriteria.teacher_id.in_(dept_teacher_ids),
-                    TeacherCriteria.status.in_(["DA_XAC_NHAN", "TU_CHOI"])
+                    TeacherCriteria.status == "DA_XAC_NHAN"
                 ).count()
                 dept_pending = TeacherCriteria.query.filter(
                     TeacherCriteria.teacher_id.in_(dept_teacher_ids),
                     TeacherCriteria.status == "DA_NOP"
                 ).count()
-                dept_approved = TeacherCriteria.query.filter(
+                dept_reviewed = TeacherCriteria.query.filter(
                     TeacherCriteria.teacher_id.in_(dept_teacher_ids),
-                    TeacherCriteria.status == "DA_XAC_NHAN"
+                    TeacherCriteria.status.in_(["DA_XAC_NHAN", "TU_CHOI"])
                 ).count()
             else:
                 dept_total_crit, dept_reviewed, dept_pending, dept_approved = 0, 0, 0, 0
 
             dept_progress = round((dept_approved / dept_total_crit) * 100, 1) if dept_total_crit > 0 else 0
 
-            # 1. GOM DANH SÁCH CHI TIẾT TỪNG GIÁO VIÊN TRONG TỔ
+            # 1. Gom danh sách chi tiết từng giáo viên trong tổ
             teacher_list = []
             for t in dept_teachers:
                 t_criterias = TeacherCriteria.query.filter_by(teacher_id=t.id).all()
@@ -160,7 +159,7 @@ def admin_dashboard():
                     "percent": t_prog
                 })
 
-            # 2. LƯU VÀO DEPT_STATS KÈM KHÓA TEACHERS
+            # 2. Lưu vào dept_stats
             dept_stats.append({
                 "id": dept.id,
                 "name": dept.name,
@@ -168,6 +167,7 @@ def admin_dashboard():
                 "leader": leader_name,
                 "head_name": leader_name,
                 "total_crit": dept_total_crit,
+                "total": dept_total_crit,
                 "reviewed": dept_reviewed,
                 "pending": dept_pending,
                 "dept_pending": dept_pending,
@@ -175,7 +175,8 @@ def admin_dashboard():
                 "dept_approved": dept_approved,
                 "progress": dept_progress,
                 "dept_percent": dept_progress,
-                "teachers": teacher_list
+                "teachers": teacher_list,
+                "teacher_list": teacher_list
             })
 
     except Exception as e:
@@ -213,10 +214,6 @@ def admin_review_heads():
     ).all()
 
     review_list = []
-    
-    # =========================================================
-    # ĐOẠN CODE LẤY FILE MINH CHỨNG CỦA TỔ TRƯỞNG TRUYỀN SANG HTML
-    # =========================================================
     for r in records:
         tc_evidences = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=r.id).all()
         ev_list = []
@@ -227,7 +224,7 @@ def admin_review_heads():
                     "file_path": tc_ev.evidence.file_path,
                     "url": tc_ev.evidence.url,
                     "title": tc_ev.evidence.title,
-                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE") # Bổ sung storage_type
+                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE")
                 })
 
         review_list.append({
@@ -239,27 +236,11 @@ def admin_review_heads():
             "criteria_name": r.criteria.name if r.criteria else "",
             "status": r.status,
             "feedback": r.feedback,
-            "evidences": ev_list  # Gửi danh sách file sang giao diện
+            "evidences": ev_list
         })
 
     return render_template("admin/review_heads.html", review_list=review_list)
-    # % Hoàn thành chung của cả Tổ
-    dept_percent = round((total_dept_completed / total_dept_criterias) * 100, 1) if total_dept_criterias > 0 else 0.0
 
-    # Tìm tổ trưởng
-    leader = Teacher.query.filter_by(department_id=dept.id, role_id=3).first() # Role 3: TT
-    leader_name = leader.full_name if leader else "Chưa phân công"
-
-    dept_stats.append({
-        'id': dept.id,
-        'name': dept.name,
-        'teacher_count': len(teachers),
-        'leader_name': leader_name,
-        'approved_count': dept_total_approved,
-        'pending_count': dept_total_pending,
-        'percent': dept_percent,
-        'teachers': teacher_list
-    })
 @app.route("/admin/export-excel")
 def export_excel():
     try:
@@ -282,8 +263,8 @@ def export_excel():
                 "Mã GV": teacher.magv,
                 "Họ và Tên": teacher.full_name,
                 "Tổ Chuyên Môn": dept_name,
-                "Minh Chứng Đã Duyệt": approved_crit,
-                "Minh Chứng Chờ Duyệt": pending_crit,
+                "Tiêu Chí Đã Đạt": approved_crit,
+                "Tiêu Chí Chờ Duyệt": pending_crit,
                 "Tỷ Lệ Hoàn Thành": progress
             })
 
@@ -337,7 +318,7 @@ def my_criteria():
                     "file_path": tc_ev.evidence.file_path,
                     "url": tc_ev.evidence.url,
                     "title": tc_ev.evidence.title,
-                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE")  # <-- BỔ SUNG DÒNG NÀY
+                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE")
                 })
 
         criteria_list.append({
@@ -360,37 +341,31 @@ def my_criteria():
         completed_count=completed_count,
         total_count=len(records)
     )
+
 @app.route("/teacher/submit-evidence", methods=["POST"])
 def submit_evidence():
-    tc_id = request.form.get("criteria_id")
-    file = request.files.get("evidence_file")
-    url_input = request.form.get("evidence_url")
+    try:
+        tc_id = request.form.get("criteria_id")
+        file = request.files.get("evidence_file")
+        url_input = request.form.get("evidence_url")
 
-    tc = TeacherCriteria.query.get(tc_id)
-    if tc:
+        tc = TeacherCriteria.query.get(tc_id)
+        if not tc:
+            flash("Không tìm thấy tiêu chí cần nộp!", "danger")
+            return redirect(url_for("my_criteria"))
+
         file_path = None
         storage_type = "URL"
         filename = None
 
-        # 1. Xử lý Upload file lên Cloudinary
+        # 1. Xử lý Upload file lên Cloudinary an toàn
         if file and file.filename != "":
             original_filename = file.filename
+            filename = original_filename
             
-            # Tách tên và đuôi file từ tên gốc
-            raw_name, file_ext = os.path.splitext(original_filename)
+            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.zip', '.rar', '.txt', '.pdf']
+            _, file_ext = os.path.splitext(original_filename)
             file_ext = file_ext.lower()
-
-            # Chuẩn hóa tên file sạch ký tự đặc biệt & chống rỗng tên
-            clean_name = secure_filename(raw_name)
-            if not clean_name:
-                clean_name = "minh_chung"
-
-            # Đặt public_id duy nhất và BẮT BUỘC chứa đuôi mở rộng
-            unique_suffix = uuid.uuid4().hex[:6]
-            custom_public_id = f"{clean_name}_{unique_suffix}{file_ext}"
-
-            # File Office, ZIP, RAR dùng 'raw'; Ảnh và PDF dùng 'auto'
-            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.zip', '.rar', '.txt']
             res_type = "raw" if file_ext in raw_extensions else "auto"
 
             try:
@@ -398,14 +373,14 @@ def submit_evidence():
                     file,
                     resource_type=res_type,
                     folder="minh_chung_dgnls",
-                    public_id=custom_public_id  # Ép Cloudinary giữ đúng tên và đuôi tệp
+                    use_filename=True,
+                    unique_filename=True
                 )
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"
-                filename = original_filename  # Lưu tên gốc có tiếng Việt để hiển thị
-            except Exception as e:
-                print("LỖI UPLOAD CLOUDINARY:", e)
-                flash(f"Lỗi kho lưu trữ: {e}", "danger")
+            except Exception as upload_err:
+                print("LỖI CLOUDINARY UPLOAD:", upload_err)
+                flash(f"Lỗi khi tải file lên kho lưu trữ: {upload_err}", "danger")
                 return redirect(url_for("my_criteria"))
 
         evidence_title = filename if filename else (url_input if url_input else f"Minh chứng {tc.criteria.code if tc.criteria else ''}")
@@ -422,22 +397,33 @@ def submit_evidence():
             db.session.add(ev)
             db.session.flush()
 
-            # Tạo liên kết ở bảng trung gian
+            # Liên kết bảng trung gian
             tc_ev = TeacherCriteriaEvidence(
                 teacher_criteria_id=tc.id,
                 evidence_id=ev.id
             )
             db.session.add(tc_ev)
-            
+
             # Cập nhật trạng thái tiêu chí
             tc.status = "DA_NOP"
-            tc.submitted_at = get_vn_now()
+            try:
+                tc.submitted_at = get_vn_now()
+            except Exception:
+                tc.submitted_at = datetime.utcnow()
             tc.feedback = None
 
             db.session.commit()
             flash("Nộp minh chứng thành công!", "success")
+        else:
+            flash("Vui lòng chọn file hoặc nhập đường dẫn liên kết!", "warning")
+
+    except Exception as e:
+        db.session.rollback()
+        print("LỖI TỔNG THỂ SUBMIT EVIDENCE:", e)
+        flash(f"Có lỗi xảy ra: {e}", "danger")
 
     return redirect(url_for("my_criteria"))
+
 @app.route("/teacher/delete-evidence/<int:tc_id>/<int:evidence_id>", methods=["POST"])
 def delete_evidence(tc_id, evidence_id):
     teacher_id = session.get("teacher_id")
@@ -464,7 +450,7 @@ def delete_evidence(tc_id, evidence_id):
 
 
 # ----------------------------------------------------
-# 4. TỔ TRƯỜNG THẨM ĐỊNH & QUẢN LÝ GIÁO VIÊN
+# 4. TỔ TRƯỞNG THẨM ĐỊNH & QUẢN LÝ GIÁO VIÊN
 # ----------------------------------------------------
 @app.route("/department/update-status", methods=["POST"])
 def update_status():
@@ -627,24 +613,20 @@ def add_teacher():
         role_code = request.form.get("role_code", "GV")
         subject_id = request.form.get("subject_id")
 
-        # 1. Kiểm tra thông tin bắt buộc
         if not magv or not full_name:
             flash("Vui lòng nhập đầy đủ Mã GV và Họ tên!", "warning")
             return redirect(url_for("manage_teachers"))
 
-        # 2. Kiểm tra trùng Mã Giáo viên
         if Teacher.query.filter_by(magv=magv).first():
             flash("Mã Giáo viên này đã tồn tại trong hệ thống!", "danger")
             return redirect(url_for("manage_teachers"))
 
-        # 3. Tạo & kiểm tra trùng Email
         final_email = email if email else f"{magv.lower()}@thpt.edu.vn"
         if Teacher.query.filter_by(email=final_email).first():
             flash(f"Email '{final_email}' đã được sử dụng bởi giáo viên khác!", "danger")
             return redirect(url_for("manage_teachers"))
 
         try:
-            # 4. Ép kiểu an toàn cho ID (Chống lỗi chuỗi rỗng '' trên PostgreSQL)
             department_id = int(dept_id) if (dept_id and str(dept_id).isdigit()) else None
             
             sub_id = int(subject_id) if (subject_id and str(subject_id).isdigit()) else None
@@ -653,9 +635,8 @@ def add_teacher():
                 sub_id = first_subject.id if first_subject else None
 
             role = Role.query.filter_by(code=role_code).first()
-            role_id = role.id if role else 5  # Mặc định là vai trò GV (ID = 5)
+            role_id = role.id if role else 5
 
-            # 5. Khởi tạo & Lưu Giáo viên mới
             new_teacher = Teacher(
                 magv=magv,
                 full_name=full_name,
@@ -668,7 +649,7 @@ def add_teacher():
             db.session.add(new_teacher)
             db.session.commit()
 
-            # 6. Tự động gán toàn bộ Tiêu chí kiểm định siêu tốc (Bulk Insert)
+            # Tự động gán toàn bộ Tiêu chí kiểm định
             all_criterias = Criteria.query.all()
             new_tc_list = [
                 TeacherCriteria(teacher_id=new_teacher.id, criteria_id=c.id, status="CHUA_NOP")
@@ -687,7 +668,6 @@ def add_teacher():
 
         return redirect(url_for("manage_teachers"))
 
-    # Xử lý phương thức GET: Lấy danh sách để nạp vào các ô chọn (Dropdown/Select)
     departments = Department.query.all()
     subjects = Subject.query.all()
     roles = Role.query.all()

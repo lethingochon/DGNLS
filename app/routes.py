@@ -131,10 +131,14 @@ def admin_dashboard():
         dept_stats = []
 
         for dept in departments:
+            # Lọc đúng danh sách giáo viên thuộc tổ này
             dept_teachers = [t for t in official_teachers if t.department_id == dept.id]
             dept_teacher_ids = [t.id for t in dept_teachers]
             
-            leader = Teacher.query.filter_by(department_id=dept.id).join(Role).filter(Role.code.in_(["TT", "TP"])).first()
+            # --- TÌM ĐÚNG TỔ TRƯỞNG TRONG TỔ NÀY ---
+            leader = next((t for t in dept_teachers if t.role and t.role.code == "TT"), None)
+            if not leader:
+                leader = next((t for t in dept_teachers if t.role and t.role.code == "TP"), None)
             leader_name = leader.full_name if leader else "Chưa phân công"
 
             if dept_teacher_ids:
@@ -156,7 +160,6 @@ def admin_dashboard():
 
             dept_progress = round((dept_approved / dept_total_crit) * 100, 1) if dept_total_crit > 0 else 0
 
-            # 1. Gom danh sách chi tiết từng giáo viên trong tổ
             teacher_list = []
             for t in dept_teachers:
                 t_criterias = TeacherCriteria.query.filter_by(teacher_id=t.id).all()
@@ -177,7 +180,6 @@ def admin_dashboard():
                     "percent": t_prog
                 })
 
-            # 2. Lưu vào dept_stats
             dept_stats.append({
                 "id": dept.id,
                 "name": dept.name,

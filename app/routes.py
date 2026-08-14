@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 import os
 import io
 import uuid
+import re
 import pandas as pd
 from sqlalchemy import or_
 from flask import render_template, request, redirect, url_for, session, flash, send_file, send_from_directory
@@ -33,6 +34,23 @@ VN_TZ = timezone(timedelta(hours=7))
 def get_vn_now():
     # Lấy giờ VN và bỏ tzinfo để lưu chính xác vào CSDL
     return datetime.now(VN_TZ).replace(tzinfo=None)
+
+# Hàm chuyển đổi tiếng Việt có dấu thành không dấu an toàn cho Cloudinary
+def sanitize_filename(filename):
+    patterns = {
+        '[àáảãạăắằẳẵặâấầẩẫậ]': 'a',
+        '[đ]': 'd',
+        '[èéẻẽẹêếềểễệ]': 'e',
+        '[ìíỉĩị]': 'i',
+        '[òóỏõọôốồổỗộơớờởỡợ]': 'o',
+        '[ùúủũụưứừửữự]': 'u',
+        '[ỳýỷỹỵ]': 'y'
+    }
+    output = filename.lower()
+    for regex, sub in patterns.items():
+        output = re.sub(regex, sub, output)
+    clean_name = re.sub(r'[^a-zA-Z0-9_]', '_', output)
+    return clean_name or "minh_chung"
 
 
 # ----------------------------------------------------
@@ -358,23 +376,29 @@ def submit_evidence():
         storage_type = "URL"
         filename = None
 
-        # 1. Xử lý Upload file lên Cloudinary an toàn
+        # 1. Xử lý Upload file lên Cloudinary an toàn tuyệt đối
         if file and file.filename != "":
             original_filename = file.filename
             filename = original_filename
             
-            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.zip', '.rar', '.txt', '.pdf']
-            _, file_ext = os.path.splitext(original_filename)
+            raw_name, file_ext = os.path.splitext(original_filename)
             file_ext = file_ext.lower()
+            
+            # Làm sạch tên tiếng Việt tránh lỗi Cloudinary
+            safe_name = sanitize_filename(raw_name)
+            unique_id = f"{safe_name}_{uuid.uuid4().hex[:6]}"
+
+            raw_extensions = ['.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.zip', '.rar', '.txt']
             res_type = "raw" if file_ext in raw_extensions else "auto"
 
             try:
+                final_public_id = f"{unique_id}{file_ext}" if res_type == "raw" else unique_id
+
                 upload_result = cloudinary.uploader.upload(
                     file,
                     resource_type=res_type,
                     folder="minh_chung_dgnls",
-                    use_filename=True,
-                    unique_filename=True
+                    public_id=final_public_id
                 )
                 file_path = upload_result.get("secure_url")
                 storage_type = "FILE"

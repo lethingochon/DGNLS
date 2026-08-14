@@ -606,28 +606,40 @@ def assign_role():
     new_role_code = request.form.get("role_code")
 
     teacher = Teacher.query.get(target_teacher_id)
-    if teacher:
-        if new_role_code == "TT" and new_dept_id:
-            role_tt = Role.query.filter_by(code="TT").first()
-            role_gv = Role.query.filter_by(code="GV").first()
-            
-            old_leaders = Teacher.query.filter_by(department_id=new_dept_id, role_id=role_tt.id).all()
-            for old_leader in old_leaders:
-                old_leader.role_id = role_gv.id
+    if not teacher:
+        flash("Không tìm thấy giáo viên!", "danger")
+        return redirect(url_for("manage_teachers"))
+
+    try:
+        role_tt = Role.query.filter_by(code="TT").first()
+        role_gv = Role.query.filter_by(code="GV").first()
+        role_target = Role.query.filter_by(code=new_role_code).first()
+
+        parsed_dept_id = int(new_dept_id) if (new_dept_id and str(new_dept_id).isdigit()) else None
+
+        # Nếu chọn bổ nhiệm làm Tổ trưởng (TT)
+        if new_role_code == "TT" and parsed_dept_id:
+            # Chuyển các Tổ trưởng cũ trong tổ này về làm GV bình thường
+            old_leaders = Teacher.query.filter_by(department_id=parsed_dept_id, role_id=role_tt.id).all()
+            for old in old_leaders:
+                if old.id != teacher.id:
+                    old.role_id = role_gv.id
 
             teacher.role_id = role_tt.id
-            teacher.department_id = new_dept_id
+            teacher.department_id = parsed_dept_id
         else:
-            role_obj = Role.query.filter_by(code=new_role_code).first()
-            if role_obj:
-                teacher.role_id = role_obj.id
-            if new_dept_id:
-                teacher.department_id = new_dept_id
+            if role_target:
+                teacher.role_id = role_target.id
+            if parsed_dept_id:
+                teacher.department_id = parsed_dept_id
 
         db.session.commit()
         flash(f"Đã cập nhật phân công cho {teacher.full_name}!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Lỗi khi cập nhật vai trò: {e}", "danger")
 
-    return redirect(url_for("manage_teachers"))
+    return redirect(url_for("manage_teachers")))
 
 @app.route("/admin/add-teacher", methods=["GET", "POST"])
 def add_teacher():

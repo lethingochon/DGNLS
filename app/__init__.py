@@ -10,6 +10,12 @@ db = SQLAlchemy()
 app = Flask(__name__)
 app.config.from_object("config.Config")
 
+# 🛠️ TẮT PREPARED STATEMENTS CHO PSYCOPG ĐỂ TƯƠNG THÍCH VỚI PGBOUNCER/RENDER POOLING
+app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {})
+app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
+    "prepare_threshold": None
+}
+
 db.init_app(app)
 
 from app import models
@@ -188,8 +194,6 @@ with app.app_context():
                     except Exception:
                         pass
                 db.session.commit()
-
-           # print(">>> ĐÃ NẠP CSDL SIÊU NHANH VÀ SỬA LỖI ID THÀNH CÔNG!", flush=True)
 
     except Exception as e:
         db.session.rollback()

@@ -639,8 +639,7 @@ def assign_role():
         db.session.rollback()
         flash(f"Lỗi khi cập nhật vai trò: {e}", "danger")
 
-    return redirect(url_for("manage_teachers")))
-
+    return redirect(url_for("manage_teachers"))
 @app.route("/admin/add-teacher", methods=["GET", "POST"])
 def add_teacher():
     if request.method == "POST":

@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -20,7 +21,7 @@ db.init_app(app)
 
 from app import models
 
-# 🛠️ NẠP TỐI ƯU SIÊU NHANH & TỰ ĐỘNG ĐỒNG BỘ SEQUENCE CHO POSTGRESQL/SQLITE
+# 🛠️ NẠP TỐI ƯU SIÊU NHANH & TỰ ĐỘNG ĐỒNG BỘ CSDL
 with app.app_context():
     try:
         db.create_all()
@@ -92,38 +93,63 @@ with app.app_context():
                         tc_obj.name = t_tc
                 db.session.commit()
 
-            # 4. Nạp Giáo viên
+            # 4. Nạp Giáo viên & Chuẩn hóa Tổ chuyên môn
             if 'GIAOVIEN' in xls.sheet_names:
                 df_gv = pd.read_excel(excel_path, sheet_name='GIAOVIEN')
                 for idx, row in df_gv.iterrows():
                     magv = str(row.get('MAGV', '')).strip()
                     hoten = str(row.get('HOTEN', '')).strip()
-                    tocm = str(row.get('TOCM', 'Tổ Tổng hợp')).strip()
-                    monday = str(row.get('MONDAY', 'Tin học')).strip()
+                    raw_tocm = str(row.get('TOCM', 'Tổ Tổng Hợp')).strip()
+                    raw_monday = str(row.get('MONDAY', 'Tin Học')).strip()
                     chucvu = str(row.get('CHUCVU', 'GV')).strip().upper()
                     email = str(row.get('EMAIL', '')).strip().lower()
 
-                    d_obj = Department.query.filter_by(name=tocm).first()
+                    if not magv or magv.lower() == 'nan':
+                        continue
+
+                    # Chuẩn hóa viết hoa chữ cái đầu và xóa khoảng trắng thừa
+                    clean_tocm = re.sub(r'\s+', ' ', raw_tocm).title()
+                    clean_monday = re.sub(r'\s+', ' ', raw_monday).title()
+
+                    # Tìm hoặc tạo Tổ chuyên môn (không phân biệt hoa/thường)
+                    d_obj = Department.query.filter(Department.name.ilike(clean_tocm)).first()
                     if not d_obj:
-                        d_obj = Department(name=tocm)
+                        d_obj = Department(name=clean_tocm)
                         db.session.add(d_obj)
                         db.session.commit()
+                    elif d_obj.name != clean_tocm:
+                        d_obj.name = clean_tocm
+                        db.session.commit()
 
-                    s_obj = Subject.query.filter_by(name=monday).first()
+                    # Tìm hoặc tạo Môn học (không phân biệt hoa/thường)
+                    s_obj = Subject.query.filter(Subject.name.ilike(clean_monday)).first()
                     if not s_obj:
-                        s_obj = Subject(code=f"MON_{monday}", name=monday)
+                        s_obj = Subject(code=f"MON_{clean_monday}", name=clean_monday)
                         db.session.add(s_obj)
+                        db.session.commit()
+                    elif s_obj.name != clean_monday:
+                        s_obj.name = clean_monday
                         db.session.commit()
 
                     target_role = roles_dict.get(chucvu, roles_dict.get("GV"))
                     final_email = email if (email and email != 'nan') else f"{magv.lower()}@thpt.edu.vn"
 
-                    existing = Teacher.query.filter((Teacher.email.ilike(final_email)) | (Teacher.magv.ilike(magv))).first()
+                    existing = Teacher.query.filter(
+                        or_(
+                            Teacher.email.ilike(final_email),
+                            Teacher.magv.ilike(magv)
+                        )
+                    ).first()
+
                     if not existing:
                         gv = Teacher(
-                            magv=magv, full_name=hoten, email=final_email,
+                            magv=magv,
+                            full_name=hoten,
+                            email=final_email,
                             password_hash=generate_password_hash('123456'),
-                            subject_id=s_obj.id, role_id=target_role.id, department_id=d_obj.id
+                            subject_id=s_obj.id,
+                            role_id=target_role.id,
+                            department_id=d_obj.id
                         )
                         db.session.add(gv)
                     else:

@@ -114,6 +114,7 @@ def admin_dashboard():
 
     try:
         all_teachers = Teacher.query.all()
+        # Loại trừ HT và HP khỏi danh sách đánh giá của các tổ
         official_teachers = [
             t for t in all_teachers 
             if not (t.role and t.role.code in ["HT", "HP"]) 
@@ -129,13 +130,27 @@ def admin_dashboard():
 
         departments = Department.query.all()
         dept_stats = []
+        processed_normalized_names = set()
 
         for dept in departments:
-            # Lọc đúng danh sách giáo viên thuộc tổ này
-            dept_teachers = [t for t in official_teachers if t.department_id == dept.id]
+            norm_name = re.sub(r'\s+', ' ', dept.name.strip().lower()) if dept.name else ""
+            if not norm_name or norm_name in processed_normalized_names:
+                continue
+
+            # Lọc tất cả giáo viên thuộc tổ này (khớp id hoặc khớp tên chuẩn hóa)
+            dept_teachers = [
+                t for t in official_teachers 
+                if t.department_id == dept.id or (t.department and re.sub(r'\s+', ' ', t.department.name.strip().lower()) == norm_name)
+            ]
+
+            # Bỏ qua các tổ rác / tổ trống không có giáo viên
+            if not dept_teachers:
+                continue
+
+            processed_normalized_names.add(norm_name)
             dept_teacher_ids = [t.id for t in dept_teachers]
             
-            # --- TÌM ĐÚNG TỔ TRƯỞNG TRONG TỔ NÀY ---
+            # Tìm Tổ trưởng (TT) hoặc Tổ phó (TP)
             leader = next((t for t in dept_teachers if t.role and t.role.code == "TT"), None)
             if not leader:
                 leader = next((t for t in dept_teachers if t.role and t.role.code == "TP"), None)
@@ -182,7 +197,7 @@ def admin_dashboard():
 
             dept_stats.append({
                 "id": dept.id,
-                "name": dept.name,
+                "name": dept.name.strip().title(),
                 "teacher_count": len(dept_teachers),
                 "leader": leader_name,
                 "head_name": leader_name,
@@ -504,10 +519,17 @@ def department_review():
         return "Bạn không có quyền truy cập!", 403
 
     dept_id = current_teacher.department_id
-    if not dept_id:
+    dept_name = current_teacher.department.name.strip().lower() if current_teacher.department else ""
+    if not dept_id and not dept_name:
         return render_template("department/review.html", grouped_reviews=[], dept_name="Tổ Chuyên Môn")
 
-    teachers_in_dept = Teacher.query.filter_by(department_id=dept_id).all()
+    # Lọc giáo viên theo cả ID tổ và tên tổ để bảo đảm không bị sót
+    teachers_in_dept = Teacher.query.filter(
+        or_(
+            Teacher.department_id == dept_id,
+            Teacher.department.has(Department.name.ilike(f"%{dept_name}%"))
+        )
+    ).all() if dept_name else Teacher.query.filter_by(department_id=dept_id).all()
 
     grouped_reviews = []
     total_dept_approved = 0
@@ -640,6 +662,7 @@ def assign_role():
         flash(f"Lỗi khi cập nhật vai trò: {e}", "danger")
 
     return redirect(url_for("manage_teachers"))
+
 @app.route("/admin/add-teacher", methods=["GET", "POST"])
 def add_teacher():
     if request.method == "POST":

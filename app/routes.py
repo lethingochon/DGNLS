@@ -703,7 +703,6 @@ def add_teacher():
         email = request.form.get("email", "").strip().lower()
         dept_id = request.form.get("department_id")
         role_code = request.form.get("role_code", "GV")
-        subject_id = request.form.get("subject_id")
 
         if not magv or not full_name:
             flash("Vui lòng nhập đầy đủ Mã GV và Họ tên!", "warning")
@@ -720,11 +719,6 @@ def add_teacher():
 
         try:
             department_id = int(dept_id) if (dept_id and str(dept_id).isdigit()) else None
-            
-            sub_id = int(subject_id) if (subject_id and str(subject_id).isdigit()) else None
-            if not sub_id:
-                first_subject = Subject.query.first()
-                sub_id = first_subject.id if first_subject else None
 
             role = Role.query.filter_by(code=role_code).first()
             role_id = role.id if role else 5
@@ -735,7 +729,7 @@ def add_teacher():
                 email=final_email,
                 password_hash=generate_password_hash("123456"),
                 department_id=department_id,
-                subject_id=sub_id,
+                subject_id=None,  # Đã bỏ chọn môn giảng dạy
                 role_id=role_id
             )
             db.session.add(new_teacher)
@@ -761,9 +755,8 @@ def add_teacher():
         return redirect(url_for("manage_teachers"))
 
     departments = Department.query.all()
-    subjects = Subject.query.all()
     roles = Role.query.all()
-    return render_template("admin/add_teacher.html", departments=departments, subjects=subjects, roles=roles)
+    return render_template("admin/add_teacher.html", departments=departments, roles=roles)
 
 @app.route("/admin/delete-teacher/<int:teacher_id>", methods=["POST"])
 def delete_teacher(teacher_id):

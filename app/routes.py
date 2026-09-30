@@ -237,44 +237,76 @@ def admin_review_heads():
         flash("Trang này dành riêng cho Ban Giám Hiệu duyệt minh chứng Tổ trưởng!", "warning")
         return redirect(url_for("admin_dashboard"))
 
+    # 1. Lấy vai trò Tổ trưởng (TT) và Tổ phó (TP)
     tt_roles = Role.query.filter(Role.code.in_(["TT", "TP"])).all()
     tt_role_ids = [r.id for r in tt_roles]
 
-    head_teachers = Teacher.query.filter(Teacher.role_id.in_(tt_role_ids)).all()
-    head_teacher_ids = [t.id for t in head_teachers]
+    # 2. Lấy danh sách toàn bộ các Tổ trưởng chuyên môn (sắp xếp theo tổ)
+    head_teachers = Teacher.query.filter(Teacher.role_id.in_(tt_role_ids)).order_by(Teacher.department_id).all()
 
-    records = TeacherCriteria.query.filter(
-        TeacherCriteria.teacher_id.in_(head_teacher_ids),
-        TeacherCriteria.status.in_(["DA_NOP", "DA_XAC_NHAN", "TU_CHOI"])
-    ).all()
+    # 3. Lấy toàn bộ 35 tiêu chí của hệ thống
+    all_criterias = Criteria.query.order_by(Criteria.code).all()
+    total_system_criteria = len(all_criterias) or 35
 
-    review_list = []
-    for r in records:
-        tc_evidences = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=r.id).all()
-        ev_list = []
-        for tc_ev in tc_evidences:
-            if tc_ev.evidence:
-                ev_list.append({
-                    "id": tc_ev.evidence.id,
-                    "file_path": tc_ev.evidence.file_path,
-                    "url": tc_ev.evidence.url,
-                    "title": tc_ev.evidence.title,
-                    "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE")
-                })
+    grouped_heads = []
 
-        review_list.append({
-            "id": r.id,
-            "teacher_name": r.teacher.full_name,
-            "teacher_magv": r.teacher.magv,
-            "dept_name": r.teacher.department.name if r.teacher.department else "Chưa phân tổ",
-            "criteria_code": r.criteria.code if r.criteria else "",
-            "criteria_name": r.criteria.name if r.criteria else "",
-            "status": r.status,
-            "feedback": r.feedback,
-            "evidences": ev_list
+    for head in head_teachers:
+        tcs = TeacherCriteria.query.filter_by(teacher_id=head.id).all()
+        tc_dict = {tc.criteria_id: tc for tc in tcs}
+
+        approved_count = 0
+        pending_count = 0
+        criterias_detail = []
+
+        for crit in all_criterias:
+            tc = tc_dict.get(crit.id)
+            status = tc.status if tc else "CHUA_NOP"
+            feedback = tc.feedback if tc else None
+            record_id = tc.id if tc else None
+
+            if status == "DA_XAC_NHAN":
+                approved_count += 1
+            elif status == "DA_NOP":
+                pending_count += 1
+
+            ev_list = []
+            if tc and status != "CHUA_NOP":
+                tc_evs = TeacherCriteriaEvidence.query.filter_by(teacher_criteria_id=tc.id).all()
+                for tc_ev in tc_evs:
+                    if tc_ev.evidence:
+                        ev_list.append({
+                            "id": tc_ev.evidence.id,
+                            "file_path": tc_ev.evidence.file_path,
+                            "url": tc_ev.evidence.url,
+                            "title": tc_ev.evidence.title or "Minh chứng",
+                            "storage_type": getattr(tc_ev.evidence, "storage_type", "FILE")
+                        })
+
+            criterias_detail.append({
+                "record_id": record_id,
+                "criteria_code": crit.code,
+                "criteria_name": crit.name,
+                "status": status,
+                "feedback": feedback,
+                "evidences": ev_list
+            })
+
+        progress_percent = round((approved_count / total_system_criteria) * 100, 1)
+
+        grouped_heads.append({
+            "teacher_id": head.id,
+            "magv": head.magv,
+            "full_name": head.full_name,
+            "dept_name": head.department.name if head.department else "Chưa phân tổ",
+            "role_title": head.role.name if head.role else "Tổ trưởng",
+            "approved_count": approved_count,
+            "pending_count": pending_count,
+            "total_crit": total_system_criteria,
+            "progress_percent": progress_percent,
+            "criterias": criterias_detail
         })
 
-    return render_template("admin/review_heads.html", review_list=review_list)
+    return render_template("admin/review_heads.html", grouped_heads=grouped_heads)
 
 @app.route("/admin/export-excel")
 def export_excel():

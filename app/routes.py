@@ -238,7 +238,7 @@ def admin_review_heads():
         return redirect(url_for("admin_dashboard"))
 
     # 1. Lấy vai trò Tổ trưởng (TT) và Tổ phó (TP)
-    tt_roles = Role.query.filter(Role.code.in_(["TT", "TP"])).all()
+    tt_roles = Role.query.filter(Role.code == "TT").all()
     tt_role_ids = [r.id for r in tt_roles]
 
     # 2. Lấy danh sách toàn bộ các Tổ trưởng chuyên môn (sắp xếp theo tổ)
